@@ -1,0 +1,25 @@
+.profile-page {
+  background: white;
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.profile-container { max-width: 600px; margin: 0 auto; }
+.profile-container h1 { font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem; }
+.profile-email { color: #666; margin-bottom: 2rem; }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.stat-card { background: var(--light); border-radius: 8px; padding: 1.5rem; text-align: center; }
+.stat-card h3 { font-size: 1rem; color: #666; margin-bottom: 0.5rem; }
+.stat-value { font-size: 2rem; font-weight: bold; color: var(--primary); }
+
+@media (max-width: 768px) {
+  .profile-page { padding: 1.5rem 1rem; }
+  .stats-grid { grid-template-columns: 1fr; }
+}
