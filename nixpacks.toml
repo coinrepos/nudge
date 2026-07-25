@@ -1,5 +1,0 @@
-[phases.install] 
-cmds = ["cd nudge-backend && npm install"] 
- 
-[start] 
-cmd = "cd nudge-backend && npm start" 
