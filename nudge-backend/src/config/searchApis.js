@@ -16,140 +16,344 @@ function extractDomain(url) {
   }
 }
 
-export async function searchSerpAPI(query) {
+function categorizeByDomain(result) {
+  const domain = result.sourceDomain || extractDomain(result.url);
+  const videoDomains = ['youtube.com', 'vimeo.com', 'dailymotion.com', 'twitch.tv', 'ted.com'];
+  const newsDomains = ['reuters.com', 'bbc.com', 'cnn.com', 'nytimes.com', 'washingtonpost.com', 'theguardian.com', 'apnews.com', 'npr.org', 'bloomberg.com', 'wsj.com', 'foxnews.com', 'cnbc.com', 'techcrunch.com', 'theverge.com', 'wired.com'];
+  const shoppingDomains = ['amazon.com', 'ebay.com', 'etsy.com', 'walmart.com', 'target.com', 'bestbuy.com', 'aliexpress.com', 'alibaba.com', 'shopify.com'];
+  if (videoDomains.some(d => domain.includes(d))) return 'videos';
+  if (newsDomains.some(d => domain.includes(d))) return 'news';
+  if (shoppingDomains.some(d => domain.includes(d))) return 'shopping';
+  return 'all';
+}
+
+// === SuperNudge: enhance query with keywords using search operators ===
+export function enhanceQuery(query, keywords) {
+  if (!keywords || keywords.length === 0) return query;
+  let enhanced = query;
+  for (const kw of keywords) {
+    if (/^\d{4}$/.test(kw)) {
+      enhanced += ` ${kw}`;
+    } else if (/^[a-z0-9-]+\.[a-z]{2,}$/i.test(kw)) {
+      enhanced += ` site:${kw}`;
+    } else if (kw.includes(' ')) {
+      enhanced += ` "${kw}"`;
+    } else {
+      enhanced += ` ${kw}`;
+    }
+  }
+  return enhanced;
+}
+
+// === SerpAPI: Regular search ===
+export async function searchSerpAPI(query, num = 50) {
   try {
     const response = await axios.get('https://serpapi.com/search', {
-      params: { q: query, api_key: SERPAPI_KEY, engine: 'google' },
+      params: { q: query, api_key: SERPAPI_KEY, engine: 'google', num },
       timeout: 10000,
     });
-    return response.data.organic_results?.map((result, i) => ({
-      title: result.title,
-      url: result.link,
-      snippet: result.snippet || '',
-      source: 'Google (SerpAPI)',
-      sourceDomain: extractDomain(result.link),
+    const data = response.data;
+    const organic = (data.organic_results || []).map((result, i) => ({
+      title: result.title, url: result.link, snippet: result.snippet || '',
+      source: 'Google', sourceDomain: extractDomain(result.link),
       relevanceScore: result.position ? (10 - result.position) / 10 : (10 - i) / 10,
-      date: result.date || null,
-    })) || [];
+      date: result.date || null, type: 'organic', thumbnail: result.thumbnail || '',
+    }));
+    const videos = (data.video_results || []).map((result, i) => ({
+      title: result.title, url: result.link, snippet: result.snippet || '',
+      source: result.source || 'Google Videos', sourceDomain: extractDomain(result.link),
+      relevanceScore: (10 - i) / 10, date: result.date || null, type: 'video', thumbnail: result.thumbnail || '',
+    }));
+    const news = (data.news_results || []).map((result, i) => ({
+      title: result.title, url: result.link, snippet: result.snippet || '',
+      source: result.source || 'Google News', sourceDomain: extractDomain(result.link),
+      relevanceScore: (10 - i) / 10, date: result.date || null, type: 'news', thumbnail: result.thumbnail || '',
+    }));
+    const shopping = (data.shopping_results || []).map((result, i) => ({
+      title: result.title, url: result.link || '', snippet: result.price || result.description || '',
+      source: 'Google Shopping', sourceDomain: extractDomain(result.link || ''),
+      relevanceScore: (10 - i) / 10, date: null, type: 'shopping', thumbnail: result.thumbnail || '', price: result.price || '',
+    }));
+    return { organic, videos, news, shopping };
   } catch (error) {
     console.error('SerpAPI error:', error.message);
-    return [];
+    return { organic: [], videos: [], news: [], shopping: [] };
   }
 }
 
-export async function searchGoogleCSE(query) {
+// === SerpAPI: Images ===
+export async function searchSerpAPIImages(query, num = 10) {
   try {
-    const response = await axios.get('https://www.googleapis.com/customsearch/v1', {
-      params: { q: query, key: GOOGLE_CSE_KEY, cx: GOOGLE_CSE_CX, num: 10 },
+    const response = await axios.get('https://serpapi.com/search', {
+      params: { q: query, api_key: SERPAPI_KEY, engine: 'google', tbm: 'isch', num },
       timeout: 10000,
     });
-    return response.data.items?.map((item, i) => ({
-      title: item.title,
-      url: item.link,
-      snippet: item.snippet || '',
-      source: 'Google Custom Search',
-      sourceDomain: extractDomain(item.link),
-      relevanceScore: (10 - i) / 10,
-      date: null,
-    })) || [];
+    return (response.data.images_results || []).slice(0, num).map((result, i) => ({
+      title: result.title || 'Image Result', url: result.original || result.link || '',
+      snippet: result.source || '', source: 'Google Images',
+      sourceDomain: extractDomain(result.original || result.link || ''),
+      relevanceScore: (10 - i) / 10, date: null, type: 'image', thumbnail: result.thumbnail || '',
+    }));
   } catch (error) {
-    console.error('Google CSE error:', error.message);
+    console.error('SerpAPI Images error:', error.message);
     return [];
   }
 }
 
-export async function searchDuckDuckGo(query) {
+// === DuckDuckGo (free, no key) — fixed with POST + better headers ===
+export async function searchDuckDuckGo(query, maxResults = 50) {
+  // Try POST to HTML endpoint first
   try {
-    const response = await axios.get('https://html.duckduckgo.com/html/', {
-      params: { q: query },
+    const response = await axios.post('https://html.duckduckgo.com/html/',
+      new URLSearchParams({ q: query, b: '', kl: 'us-en' }).toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Origin': 'https://html.duckduckgo.com',
+          'Referer': 'https://html.duckduckgo.com/',
+        },
+        timeout: 10000,
+      }
+    );
+    const results = parseDDGHtml(response.data, maxResults);
+    if (results.length > 0) return results;
+  } catch (error) {
+    console.error('DDG POST error:', error.message);
+  }
+
+  // Fallback: lite endpoint
+  try {
+    const response = await axios.get('https://lite.duckduckgo.com/lite/', {
+      params: { q: query, kl: 'us-en' },
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html',
+        'Accept-Language': 'en-US,en;q=0.9',
       },
       timeout: 10000,
     });
-    const $ = cheerio.load(response.data);
-    const results = [];
-    $('.result').each((i, elem) => {
-      if (i >= 10) return false;
-      const title = $(elem).find('.result__a').text().trim();
-      const rawUrl = $(elem).find('.result__a').attr('href');
-      const snippet = $(elem).find('.result__snippet').text().trim();
-      if (title && rawUrl) {
-        let cleanUrl = rawUrl;
-        if (rawUrl.includes('uddg=')) {
-          const match = rawUrl.match(/uddg=([^&]+)/);
-          if (match) cleanUrl = decodeURIComponent(match[1]);
-        }
-        results.push({
-          title, url: cleanUrl, snippet,
-          source: 'DuckDuckGo',
-          sourceDomain: extractDomain(cleanUrl),
-          relevanceScore: (10 - i) / 10, date: null,
-        });
-      }
-    });
-    return results;
+    return parseDDGLite(response.data, maxResults);
   } catch (error) {
-    console.error('DuckDuckGo error:', error.message);
+    console.error('DDG Lite error:', error.message);
     return [];
   }
 }
 
-function getDemoResults(query) {
-  const sources = ['Wikipedia', 'Medium', 'GitHub', 'Stack Overflow', 'Reddit', 'Dev.to', 'YouTube', 'ArXiv', 'Hacker News', 'Mozilla Docs'];
-  const domains = ['wikipedia.org', 'medium.com', 'github.com', 'stackoverflow.com', 'reddit.com', 'dev.to', 'youtube.com', 'arxiv.org', 'news.ycombinator.com', 'developer.mozilla.org'];
-  const suffixes = ['Complete Guide', 'Tutorial', 'Best Practices', 'Deep Dive', 'Getting Started', 'FAQ', 'Examples', 'Reference', 'Overview', 'Explained'];
-  return Array.from({ length: 10 }, (_, i) => ({
-    title: `${query} - ${suffixes[i]}`,
-    url: `https://${domains[i]}/search?q=${encodeURIComponent(query)}`,
-    snippet: `Discover everything about ${query}. This result is from ${sources[i]} and covers key aspects including fundamentals, advanced topics, and practical examples.`,
-    source: `Demo (${sources[i]})`,
-    sourceDomain: domains[i],
-    relevanceScore: (10 - i) / 10,
-    date: new Date(Date.now() - i * 86400000).toISOString(),
-  }));
+function parseDDGHtml(html, maxResults) {
+  const $ = cheerio.load(html);
+  const results = [];
+  $('.result').each((i, elem) => {
+    if (i >= maxResults) return false;
+    const title = $(elem).find('.result__a').text().trim();
+    const rawUrl = $(elem).find('.result__a').attr('href');
+    const snippet = $(elem).find('.result__snippet').text().trim();
+    if (title && rawUrl) {
+      let cleanUrl = rawUrl;
+      if (rawUrl.includes('uddg=')) {
+        const match = rawUrl.match(/uddg=([^&]+)/);
+        if (match) cleanUrl = decodeURIComponent(match[1]);
+      }
+      results.push({
+        title, url: cleanUrl, snippet, source: 'DuckDuckGo',
+        sourceDomain: extractDomain(cleanUrl), relevanceScore: (maxResults - i) / maxResults,
+        date: null, type: 'organic', thumbnail: '',
+      });
+    }
+  });
+  return results;
 }
 
-export async function fetchSearchResults(query) {
-  let results = [];
+function parseDDGLite(html, maxResults) {
+  const $ = cheerio.load(html);
+  const results = [];
+  $('table.results-table tr').each((i, elem) => {
+    if (i >= maxResults) return false;
+    const link = $(elem).find('a.result-link');
+    const title = link.text().trim();
+    const rawUrl = link.attr('href');
+    const snippet = $(elem).find('td.result-snippet').text().trim();
+    if (title && rawUrl) {
+      let cleanUrl = rawUrl;
+      if (rawUrl.includes('uddg=')) {
+        const match = rawUrl.match(/uddg=([^&]+)/);
+        if (match) cleanUrl = decodeURIComponent(match[1]);
+      }
+      results.push({
+        title, url: cleanUrl, snippet, source: 'DuckDuckGo',
+        sourceDomain: extractDomain(cleanUrl), relevanceScore: (maxResults - i) / maxResults,
+        date: null, type: 'organic', thumbnail: '',
+      });
+    }
+  });
+  // Fallback: try generic links if structured parsing fails
+  if (results.length === 0) {
+    $('a[href*="uddg="]').each((i, elem) => {
+      if (i >= maxResults) return false;
+      const title = $(elem).text().trim();
+      const rawUrl = $(elem).attr('href');
+      if (title && rawUrl) {
+        const match = rawUrl.match(/uddg=([^&]+)/);
+        if (match) {
+          const cleanUrl = decodeURIComponent(match[1]);
+          results.push({
+            title, url: cleanUrl, snippet: '', source: 'DuckDuckGo',
+            sourceDomain: extractDomain(cleanUrl), relevanceScore: (maxResults - i) / maxResults,
+            date: null, type: 'organic', thumbnail: '',
+          });
+        }
+      }
+    });
+  }
+  return results;
+}
+
+// === Searx (free meta-search, multiple instances) ===
+const SEARX_INSTANCES = ['https://searx.be', 'https://search.mdosch.de', 'https://searx.tiekoetter.com'];
+
+export async function searchSearx(query, maxResults = 50) {
+  for (const instance of SEARX_INSTANCES) {
+    try {
+      const response = await axios.get(`${instance}/search`, {
+        params: { q: query, format: 'json', categories: 'general' },
+        timeout: 8000,
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      });
+      if (response.data.results && response.data.results.length > 0) {
+        console.log(`Searx (${instance}) returned ${response.data.results.length} results`);
+        return response.data.results.slice(0, maxResults).map((result, i) => ({
+          title: result.title || 'Untitled', url: result.url,
+          snippet: result.content || '', source: 'Searx',
+          sourceDomain: extractDomain(result.url),
+          relevanceScore: (maxResults - i) / maxResults,
+          date: null, type: 'organic', thumbnail: '',
+        }));
+      }
+    } catch (error) {
+      console.error(`Searx (${instance}) error:`, error.message);
+    }
+  }
+  return [];
+}
+
+// === Demo Mode ===
+function getDemoResults(query) {
+  const cats = {
+    all: ['Complete Guide', 'Tutorial', 'Best Practices', 'Deep Dive', 'Getting Started', 'FAQ', 'Examples', 'Reference', 'Overview', 'Explained'],
+    images: ['Photo Gallery', 'Image Collection', 'Visual Guide', 'Diagram', 'Infographic', 'Chart', 'Illustration', 'Map', 'Screenshot', 'Art'],
+    videos: ['Video Tutorial', 'Documentary', 'Walkthrough', 'Demo Video', 'Explainer', 'Interview', 'Presentation', 'Webinar', 'Animation', 'Review'],
+    news: ['Latest News', 'Breaking Update', 'Industry Report', 'Analysis', 'Opinion Piece', 'Feature Story', 'Update', 'Announcement', 'Coverage', 'Briefing'],
+    shopping: ['Best Deals', 'Top Products', 'Buy Now', 'Price Comparison', 'Top Rated Review', 'Best Seller', 'Recommended', 'Discount Offer', 'New Arrival', 'Editor Pick'],
+  };
+  const domains = {
+    all: ['wikipedia.org', 'medium.com', 'github.com', 'stackoverflow.com', 'reddit.com', 'dev.to', 'hubspot.com', 'arxiv.org', 'news.ycombinator.com', 'developer.mozilla.org'],
+    images: ['images.google.com', 'flickr.com', 'unsplash.com', 'pinterest.com', 'imgur.com', 'shutterstock.com', 'gettyimages.com', 'alamy.com', 'pixabay.com', 'stock.adobe.com'],
+    videos: ['youtube.com', 'vimeo.com', 'dailymotion.com', 'twitch.tv', 'ted.com', 'coursera.org', 'udemy.com', 'pluralsight.com', 'lynda.com', 'skillshare.com'],
+    news: ['reuters.com', 'bbc.com', 'cnn.com', 'nytimes.com', 'theguardian.com', 'apnews.com', 'npr.org', 'bloomberg.com', 'wsj.com', 'techcrunch.com'],
+    shopping: ['amazon.com', 'ebay.com', 'etsy.com', 'walmart.com', 'target.com', 'bestbuy.com', 'aliexpress.com', 'alibaba.com', 'shopify.com', 'wish.com'],
+  };
+  const result = {};
+  for (const [cat, suffixes] of Object.entries(cats)) {
+    result[cat] = suffixes.map((suffix, i) => ({
+      title: `${query} - ${suffix}`,
+      url: `https://${domains[cat][i % domains[cat].length]}/search?q=${encodeURIComponent(query)}`,
+      snippet: `Discover everything about ${query}. This result covers key aspects including fundamentals, advanced topics, and practical examples.`,
+      source: `Demo (${domains[cat][i % domains[cat].length]})`,
+      sourceDomain: domains[cat][i % domains[cat].length],
+      relevanceScore: (10 - i) / 10,
+      date: new Date(Date.now() - i * 86400000).toISOString(),
+      type: cat === 'all' ? 'organic' : cat.slice(0, -1),
+      thumbnail: '',
+    }));
+  }
+  return result;
+}
+
+// === Main fetch: returns categorized results ===
+export async function fetchSearchResults(query, options = {}) {
+  const resultCounts = options.resultCounts || { all: 50, images: 10, videos: 25, news: 15, shopping: 15 };
+  const categorized = { all: [], images: [], videos: [], news: [], shopping: [] };
+
   if (SERPAPI_KEY) {
     console.log('Searching with SerpAPI...');
-    results = await searchSerpAPI(query);
-  }
-  if (results.length < 5 && GOOGLE_CSE_KEY && GOOGLE_CSE_CX) {
-    console.log('Searching with Google CSE...');
-    results = [...results, ...await searchGoogleCSE(query)];
-  }
-  if (results.length < 5) {
-    console.log('Searching with DuckDuckGo...');
-    results = [...results, ...await searchDuckDuckGo(query)];
-  }
-  if (results.length === 0) {
-    console.warn('No API results available, using demo mode.');
-    results = getDemoResults(query);
-  }
-  const seen = new Set();
-  results = results.filter(r => {
-    if (seen.has(r.url)) return false;
-    seen.add(r.url);
-    return true;
-  });
-  return results.slice(0, 15);
-}
+    const serpResults = await searchSerpAPI(query, resultCounts.all);
+    categorized.all = serpResults.organic.slice(0, resultCounts.all);
+    categorized.videos = serpResults.videos.slice(0, resultCounts.videos);
+    categorized.news = serpResults.news.slice(0, resultCounts.news);
+    categorized.shopping = serpResults.shopping.slice(0, resultCounts.shopping);
 
-export function calculateRelevanceScore(results) {
-  if (!results || results.length < 3) return 'medium';
-  const topThree = results.slice(0, 3);
-  const avg = topThree.reduce((sum, r) => sum + r.relevanceScore, 0) / 3;
-  return avg > 0.6 ? 'high' : 'medium';
+    console.log('Fetching images from SerpAPI...');
+    categorized.images = await searchSerpAPIImages(query, resultCounts.images);
+
+    // Fill missing categories from organic by domain
+    if (categorized.videos.length < resultCounts.videos) {
+      const extra = categorized.all.filter(r => categorizeByDomain(r) === 'videos');
+      categorized.videos = [...categorized.videos, ...extra].slice(0, resultCounts.videos);
+    }
+    if (categorized.news.length < resultCounts.news) {
+      const extra = categorized.all.filter(r => categorizeByDomain(r) === 'news');
+      categorized.news = [...categorized.news, ...extra].slice(0, resultCounts.news);
+    }
+    if (categorized.shopping.length < resultCounts.shopping) {
+      const extra = categorized.all.filter(r => categorizeByDomain(r) === 'shopping');
+      categorized.shopping = [...categorized.shopping, ...extra].slice(0, resultCounts.shopping);
+    }
+  } else {
+    // FREE path: DuckDuckGo + Searx (no API key needed)
+    console.log('Searching with DuckDuckGo...');
+    let organicResults = await searchDuckDuckGo(query, resultCounts.all);
+
+    if (organicResults.length < 5) {
+      console.log('DDG returned few results, trying Searx...');
+      const searxResults = await searchSearx(query, resultCounts.all);
+      organicResults = [...organicResults, ...searxResults];
+    }
+
+    categorized.all = organicResults.slice(0, resultCounts.all);
+    categorized.videos = organicResults.filter(r => categorizeByDomain(r) === 'videos').slice(0, resultCounts.videos);
+    categorized.news = organicResults.filter(r => categorizeByDomain(r) === 'news').slice(0, resultCounts.news);
+    categorized.shopping = organicResults.filter(r => categorizeByDomain(r) === 'shopping').slice(0, resultCounts.shopping);
+  }
+
+  // Demo mode if nothing came back
+  if (categorized.all.length === 0) {
+    console.warn('No API results, using demo mode.');
+    return getDemoResults(query);
+  }
+
+  // Fill empty reels with subset of "all"
+  const fillEmpty = (reel, count) => {
+    if (reel.length === 0 && categorized.all.length > 0) {
+      return categorized.all.slice(0, Math.min(count, categorized.all.length));
+    }
+    return reel;
+  };
+  categorized.images = fillEmpty(categorized.images, resultCounts.images);
+  categorized.videos = fillEmpty(categorized.videos, resultCounts.videos);
+  categorized.news = fillEmpty(categorized.news, resultCounts.news);
+  categorized.shopping = fillEmpty(categorized.shopping, resultCounts.shopping);
+
+  return categorized;
 }
 
 export function checkWinningCombination(reels) {
-  if (!reels || reels.length < 3) return false;
-  const topResults = reels.map(reel => reel[0]).filter(Boolean);
+  if (!reels) return false;
+  const topResults = [];
+  for (const key of ['all', 'images', 'videos', 'news', 'shopping']) {
+    if (reels[key] && reels[key][0]) topResults.push(reels[key][0]);
+  }
   if (topResults.length < 3) return false;
   const domains = topResults.map(r => r.sourceDomain);
   const allSameDomain = domains.every(d => d === domains[0]);
   const allHighRelevance = topResults.every(r => r.relevanceScore > 0.6);
   return allSameDomain || allHighRelevance;
+}
+
+export function calculateRelevanceScore(results) {
+  if (!results || !results.all || results.all.length < 3) return 'medium';
+  const topThree = results.all.slice(0, 3);
+  const avg = topThree.reduce((sum, r) => sum + r.relevanceScore, 0) / 3;
+  return avg > 0.6 ? 'high' : 'medium';
 }

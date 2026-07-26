@@ -1,33 +1,59 @@
 .leaderboard-page {
-  background: white;
+  background: var(--dark);
   border-radius: 12px;
   padding: 3rem 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
 }
 
-.leaderboard-container { max-width: 800px; margin: 0 auto; }
-.leaderboard-container h1 { font-size: 2rem; color: var(--primary); margin-bottom: 2rem; text-align: center; }
+.leaderboard-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
 
-.leaderboard-table-wrapper { overflow-x: auto; }
+.leaderboard-container h1 {
+  font-size: 2rem;
+  color: var(--primary);
+  margin-bottom: 2rem;
+  text-align: center;
+}
 
-.leaderboard-table { width: 100%; border-collapse: collapse; }
+.leaderboard-table-wrapper {
+  overflow-x: auto;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+}
 
 .leaderboard-table th {
   padding: 1rem;
   text-align: left;
   background: var(--light);
-  color: var(--dark);
+  color: var(--text-muted);
   font-weight: 600;
   border-bottom: 2px solid var(--border);
 }
 
-.leaderboard-table td { padding: 1rem; border-bottom: 1px solid var(--border); }
-.leaderboard-table tr.top-rank { background: #fef9c3; }
+.leaderboard-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.leaderboard-table tr.top-rank {
+  background: rgba(245, 158, 11, 0.1);
+}
+
 .leaderboard-table .rank { font-weight: bold; }
 .leaderboard-table .username { font-weight: 600; color: var(--primary); }
+.leaderboard-table .credits { color: var(--primary); font-weight: 600; }
+
 .leaderboard-error { color: var(--danger); text-align: center; }
 
 @media (max-width: 768px) {
   .leaderboard-page { padding: 1.5rem 1rem; }
-  .leaderboard-table th, .leaderboard-table td { padding: 0.6rem 0.5rem; font-size: 0.85rem; }
+  .leaderboard-table th,
+  .leaderboard-table td { padding: 0.6rem 0.5rem; font-size: 0.85rem; }
 }

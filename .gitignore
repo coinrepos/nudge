@@ -6,3 +6,8 @@ dist/
 postgres_data/
 nudge.zip
 nudge.tar.gz
+.agents/.env
+.npm/
+__pycache__/
+.cache/
+blobs/

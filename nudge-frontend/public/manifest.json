@@ -1,0 +1,26 @@
+{
+  "name": "Nudge — Spin to Discover",
+  "short_name": "Nudge",
+  "description": "Gamified search interface with slot-machine reels. Spin to discover, explore to earn.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0e27",
+  "theme_color": "#0a0e27",
+  "categories": ["search", "entertainment", "utilities"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='30' fill='%230a0e27'/><rect x='20' y='40' width='44' height='112' rx='8' fill='none' stroke='%23f59e0b' stroke-width='4'/><rect x='74' y='40' width='44' height='112' rx='8' fill='none' stroke='%23f59e0b' stroke-width='4'/><rect x='128' y='40' width='44' height='112' rx='8' fill='none' stroke='%23f59e0b' stroke-width='4'/><text x='42' y='110' font-size='40' text-anchor='middle' fill='%23f59e0b' font-family='monospace' font-weight='bold'>N</text><text x='96' y='110' font-size='40' text-anchor='middle' fill='%23f59e0b' font-family='monospace' font-weight='bold'>U</text><text x='150' y='110' font-size='40' text-anchor='middle' fill='%23f59e0b' font-family='monospace' font-weight='bold'>D</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%230a0e27'/><rect x='50' y='100' width='120' height='312' rx='16' fill='none' stroke='%23f59e0b' stroke-width='8'/><rect x='196' y='100' width='120' height='312' rx='16' fill='none' stroke='%23f59e0b' stroke-width='8'/><rect x='342' y='100' width='120' height='312' rx='16' fill='none' stroke='%23f59e0b' stroke-width='8'/><text x='110' y='295' font-size='100' text-anchor='middle' fill='%23f59e0b' font-family='monospace' font-weight='bold'>N</text><text x='256' y='295' font-size='100' text-anchor='middle' fill='%23f59e0b' font-family='monospace' font-weight='bold'>U</text><text x='402' y='295' font-size='100' text-anchor='middle' fill='%23f59e0b' font-family='monospace' font-weight='bold'>D</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

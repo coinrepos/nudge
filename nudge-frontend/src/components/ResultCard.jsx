@@ -1,20 +1,71 @@
-import React from 'react'
+import React, { useState } from 'react'
 import '../styles/ResultCard.css'
 
-export default function ResultCard({ result }) {
-  const handleClick = () => { if (result.url) window.open(result.url, '_blank') }
+export default function ResultCard({ result, compact }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleClick = () => {
+    if (result.url) {
+      window.open(result.url, '_blank')
+    }
+  }
+
+  const handleShare = (e) => {
+    e.stopPropagation()
+    if (navigator.share) {
+      navigator.share({ title: result.title, url: result.url })
+    } else {
+      navigator.clipboard.writeText(result.url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  if (compact) {
+    return (
+      <div className="result-card compact" onClick={handleClick}>
+        <h3 className="result-title">{result.title || 'Untitled'}</h3>
+        <div className="compact-footer">
+          <span className="result-source">{result.sourceDomain || result.source || 'Unknown'}</span>
+          <div className="compact-actions">
+            <span className="result-relevance">{(result.relevanceScore * 100).toFixed(0)}%</span>
+            <button className="share-btn compact-share" onClick={handleShare} title="Share">
+              {copied ? '✓' : '📤'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="result-card" onClick={handleClick}>
       <div className="result-header">
         <h3 className="result-title">{result.title || 'Untitled'}</h3>
         <span className="result-source">{result.source || 'Unknown'}</span>
       </div>
-      <p className="result-snippet">{result.snippet || 'No description available'}</p>
+
+      <p className="result-snippet">
+        {result.snippet || 'No description available'}
+      </p>
+
       <div className="result-footer">
-        <span className="result-relevance">Relevance: {(result.relevanceScore * 100).toFixed(0)}%</span>
-        {result.date && <span className="result-date">{new Date(result.date).toLocaleDateString()}</span>}
+        <span className="result-relevance">
+          Relevance: {(result.relevanceScore * 100).toFixed(0)}%
+        </span>
+        {result.date && (
+          <span className="result-date">{new Date(result.date).toLocaleDateString()}</span>
+        )}
       </div>
-      <a href={result.url} target="_blank" rel="noopener noreferrer" className="result-url">{result.url?.substring(0, 40)}...</a>
+
+      <div className="result-links">
+        <a href={result.url} target="_blank" rel="noopener noreferrer" className="result-url" onClick={(e) => e.stopPropagation()}>
+          {result.url?.substring(0, 40)}...
+        </a>
+        <button className="share-btn" onClick={handleShare} title="Share result">
+          {copied ? '✓ Copied!' : '📤 Share'}
+        </button>
+      </div>
     </div>
   )
 }

@@ -1,71 +1,174 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import ResultCard from './ResultCard'
 import '../styles/ReelSpinner.css'
 
-export default function ReelSpinner({ reels, isWinning, onSpinComplete }) {
+const CATEGORIES = [
+  { key: 'all', label: 'All', icon: '🔍' },
+  { key: 'images', label: 'Images', icon: '🖼️' },
+  { key: 'videos', label: 'Videos', icon: '🎬' },
+  { key: 'news', label: 'News', icon: '📰' },
+  { key: 'shopping', label: 'Shopping', icon: '🛒' },
+]
+
+const SYMBOL_HEIGHT = 110
+
+export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMode, onResultModeChange }) {
   const [isSpinning, setIsSpinning] = useState(false)
-  const [visibleResults, setVisibleResults] = useState([null, null, null])
-  const intervalsRef = useRef([])
+  const [activeCategory, setActiveCategory] = useState('all')
+  const [spinningReels, setSpinningReels] = useState({})
+  const [finalPositions, setFinalPositions] = useState({})
+  const timersRef = useRef([])
 
   useEffect(() => {
-    if (reels && reels.length === 3) {
-      setVisibleResults(reels.map((reel) => reel[0] || null))
-    }
-  }, [reels])
-
-  useEffect(() => {
-    return () => { intervalsRef.current.forEach(interval => clearInterval(interval)) }
+    return () => { timersRef.current.forEach(t => clearTimeout(t)) }
   }, [])
 
-  const spinReel = (reelIndex, duration) => {
-    const reel = reels[reelIndex]
-    if (!reel || reel.length === 0) return
-    const steps = 20
-    const intervalTime = duration / steps
-    let currentStep = 0
-    const spin = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * reel.length)
-      setVisibleResults((prev) => {
-        const newResults = [...prev]
-        newResults[reelIndex] = reel[randomIndex]
-        return newResults
-      })
-      currentStep++
-      if (currentStep >= steps) {
-        clearInterval(spin)
-        intervalsRef.current = intervalsRef.current.filter(i => i !== spin)
+  const visibleCats = activeCategory === 'all'
+    ? CATEGORIES
+    : CATEGORIES.filter(c => c.key === activeCategory)
+
+  const visibleSymbols = activeCategory === 'all' ? 3 : 5
+
+  const displayedReels = useMemo(() => {
+    if (!reels) return {}
+    if (resultMode === 'random') {
+      const shuffled = {}
+      for (const [key, results] of Object.entries(reels)) {
+        shuffled[key] = [...results].sort(() => Math.random() - 0.5)
       }
-    }, intervalTime)
-    intervalsRef.current.push(spin)
-  }
-
-  const handleSpin = async () => {
-    if (isSpinning || !reels || reels.some((r) => !r || r.length === 0)) return
-    setIsSpinning(true)
-    const spinDuration = 1500
-    for (let i = 0; i < 3; i++) {
-      setTimeout(() => { spinReel(i, spinDuration) }, i * 200)
+      return shuffled
     }
-    setTimeout(() => { setIsSpinning(false); onSpinComplete?.() }, spinDuration + 400)
+    return reels
+  }, [reels, resultMode])
+
+  const handleSpin = () => {
+    if (isSpinning) return
+    const hasResults = visibleCats.some(cat => {
+      const reel = displayedReels[cat.key] || []
+      return reel.length > 0
+    })
+    if (!hasResults) return
+
+    setIsSpinning(true)
+    const spinning = {}
+    const positions = {}
+    visibleCats.forEach(cat => {
+      spinning[cat.key] = true
+      positions[cat.key] = 0
+    })
+    setSpinningReels(spinning)
+    setFinalPositions(positions)
+
+    visibleCats.forEach((cat, index) => {
+      const reel = displayedReels[cat.key] || []
+      const stopDelay = 1200 + index * 250
+
+      const timer = setTimeout(() => {
+        const finalIndex = reel.length <= visibleSymbols
+          ? 0
+          : Math.floor(Math.random() * (reel.length - visibleSymbols + 1))
+        setFinalPositions(prev => ({ ...prev, [cat.key]: finalIndex * SYMBOL_HEIGHT }))
+        setSpinningReels(prev => ({ ...prev, [cat.key]: false }))
+      }, stopDelay)
+      timersRef.current.push(timer)
+    })
+
+    const totalDuration = 1200 + (visibleCats.length - 1) * 250 + 500
+    const completeTimer = setTimeout(() => {
+      setIsSpinning(false)
+      onSpinComplete?.()
+    }, totalDuration)
+    timersRef.current.push(completeTimer)
   }
 
-  if (!reels || reels.length === 0) {
-    return <div className="reel-spinner empty">Enter a search query to begin</div>
+  const isEmpty = !reels || Object.values(reels).every(arr => !arr || arr.length === 0)
+
+  if (isEmpty) {
+    return null
   }
 
   return (
-    <div className="reel-spinner-container">
-      <div className="reels-wrapper">
-        {visibleResults.map((result, index) => (
-          <div key={index} className={`reel ${isSpinning ? 'spinning' : ''}`}>
-            {result ? <ResultCard result={result} /> : <div className="reel-empty">No results</div>}
-          </div>
-        ))}
+    <div className="slot-machine">
+      {/* Category buttons + mode toggle */}
+      <div className="reel-controls">
+        <div className="category-buttons">
+          {CATEGORIES.map(cat => {
+            const count = (displayedReels[cat.key] || []).length
+            return (
+              <button
+                key={cat.key}
+                className={`cat-btn ${activeCategory === cat.key ? 'active' : ''}`}
+                onClick={() => setActiveCategory(cat.key)}
+              >
+                {cat.icon} {cat.label}
+                {count > 0 && <span className="cat-count">{count}</span>}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mode-toggle">
+          <button
+            className={`mode-btn ${resultMode === 'top' ? 'active' : ''}`}
+            onClick={() => onResultModeChange('top')}
+          >Top Results</button>
+          <button
+            className={`mode-btn ${resultMode === 'random' ? 'active' : ''}`}
+            onClick={() => onResultModeChange('random')}
+          >🎲 Random</button>
+        </div>
       </div>
-      <button onClick={handleSpin} disabled={isSpinning} className={`spin-btn ${isWinning ? 'winning' : ''}`}>
+
+      {/* Reels */}
+      <div className="slot-reels">
+        {visibleCats.map((cat) => {
+          const reel = displayedReels[cat.key] || []
+          return (
+            <div className="slot-reel" key={cat.key}>
+              <div className="reel-label">{cat.icon} {cat.label}</div>
+              <div
+                className="reel-viewport"
+                style={{ height: visibleSymbols * SYMBOL_HEIGHT }}
+              >
+                <div
+                  className={`reel-track ${spinningReels[cat.key] ? 'spinning' : ''}`}
+                  style={{
+                    transform: spinningReels[cat.key]
+                      ? undefined
+                      : `translateY(-${finalPositions[cat.key] || 0}px)`,
+                    transition: spinningReels[cat.key] ? 'none' : 'transform 0.5s ease-out',
+                  }}
+                >
+                  {reel.length > 0 ? (
+                    reel.map((result, i) => (
+                      <div className="reel-symbol" key={i} style={{ height: SYMBOL_HEIGHT }}>
+                        <ResultCard result={result} compact />
+                      </div>
+                    ))
+                  ) : (
+                    <div className="reel-symbol empty-symbol" style={{ height: SYMBOL_HEIGHT }}>
+                      <span>No results</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Spin button */}
+      <button
+        onClick={handleSpin}
+        disabled={isSpinning}
+        className={`spin-btn ${isWinning ? 'winning' : ''}`}
+      >
         {isSpinning ? '🎰 Spinning...' : '🎰 SPIN'}
       </button>
-      {isWinning && <div className="winning-banner">🎉 WINNING COMBINATION! +3 Credits</div>}
+
+      {isWinning && (
+        <div className="winning-banner">🎉 WINNING COMBINATION! +3 Credits</div>
+      )}
     </div>
   )
 }

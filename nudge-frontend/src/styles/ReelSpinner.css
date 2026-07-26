@@ -1,64 +1,200 @@
-.reel-spinner-container {
+.slot-machine {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2rem;
-  margin-top: 3rem;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
 }
 
-.reels-wrapper {
+/* Controls */
+.reel-controls {
   display: flex;
-  gap: 2rem;
-  justify-content: center;
   flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
   width: 100%;
 }
 
-.reel {
-  width: 280px;
-  height: 350px;
-  border: 3px solid var(--primary);
+.category-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.cat-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--light);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cat-btn:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.cat-btn.active {
+  background: var(--primary);
+  color: var(--darker);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+.cat-count {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+
+.cat-btn:not(.active) .cat-count {
+  background: var(--darker);
+  color: var(--text-muted);
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.mode-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: var(--light);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.mode-btn.active {
+  background: var(--secondary);
+  color: var(--darker);
+  font-weight: 600;
+}
+
+/* Reels */
+.slot-reels {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  width: 100%;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  scrollbar-width: thin;
+}
+
+.slot-reel {
+  flex-shrink: 0;
+  width: 200px;
+  background: var(--darker);
   border-radius: 8px;
-  background: white;
+  overflow: hidden;
+  border: 2px solid var(--lighter);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.reel-label {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: var(--darker);
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reel-viewport {
+  overflow: hidden;
+  position: relative;
+  background: var(--darker);
+}
+
+.reel-viewport::before,
+.reel-viewport::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 30px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.reel-viewport::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--darker), transparent);
+}
+
+.reel-viewport::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--darker), transparent);
+}
+
+.reel-track { will-change: transform; }
+
+.reel-track.spinning {
+  animation: slotScroll 0.12s linear infinite;
+}
+
+@keyframes slotScroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-330px); }
+}
+
+.reel-symbol {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  transition: all 0.3s;
+  padding: 0.25rem;
 }
 
-.reel.spinning {
-  animation: spinReel 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+.reel-symbol.empty-symbol {
+  color: var(--lighter);
+  font-size: 0.85rem;
 }
 
-@keyframes spinReel {
-  0%, 100% { transform: rotateY(0); }
-  50% { transform: rotateY(180deg); }
-}
-
-.reel-empty { text-align: center; color: var(--border); font-size: 0.9rem; }
-.reel-spinner.empty { text-align: center; color: white; font-size: 1.2rem; padding: 3rem; }
-
+/* Spin button */
 .spin-btn {
   padding: 1rem 3rem;
   font-size: 1.2rem;
   font-weight: bold;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: var(--darker);
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .spin-btn:hover:not(:disabled) {
   transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
 }
 
 .spin-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.spin-btn.winning { background: linear-gradient(135deg, var(--success), #34d399); }
+
+.spin-btn.winning {
+  background: linear-gradient(135deg, var(--success), #34d399);
+  color: white;
+}
 
 .winning-banner {
   font-size: 1.5rem;
@@ -73,8 +209,20 @@
   50% { transform: translateY(-20px); }
 }
 
+@media (max-width: 1024px) {
+  .slot-reels { gap: 0.5rem; }
+  .slot-reel { width: 175px; }
+}
+
 @media (max-width: 768px) {
-  .reels-wrapper { flex-direction: column; align-items: center; gap: 1rem; }
-  .reel { width: 100%; max-width: 350px; height: 280px; }
+  .slot-reels {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 1rem;
+    justify-content: flex-start;
+  }
+  .slot-reel { width: 160px; }
   .spin-btn { width: 100%; max-width: 350px; }
+  .reel-controls { flex-direction: column; }
 }

@@ -6,5 +6,6 @@ const router = express.Router();
 
 router.post('/query', optionalAuth, searchController.performSearch);
 router.get('/history', auth, searchController.getSearchHistory);
+router.get('/trending', searchController.getTrendingSearches);
 
 export default router;

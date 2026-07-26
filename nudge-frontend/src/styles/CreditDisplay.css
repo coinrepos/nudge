@@ -2,11 +2,11 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: var(--darker);
   padding: 0.4rem 1rem;
   border-radius: 20px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
 }
 
