@@ -26,7 +26,11 @@ export default function Navbar() {
 
         <div className="navbar-menu">
           <Link to="/" className="nav-link">Search</Link>
-          <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
+
+          {/* Leaderboard only visible when logged in */}
+          {user && (
+            <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
+          )}
 
           {user ? (
             <>

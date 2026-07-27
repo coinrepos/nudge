@@ -27,25 +27,20 @@ function categorizeByDomain(result) {
   return 'all';
 }
 
-// === SuperNudge: enhance query with keywords using search operators ===
+// === SuperNudge ===
 export function enhanceQuery(query, keywords) {
   if (!keywords || keywords.length === 0) return query;
   let enhanced = query;
   for (const kw of keywords) {
-    if (/^\d{4}$/.test(kw)) {
-      enhanced += ` ${kw}`;
-    } else if (/^[a-z0-9-]+\.[a-z]{2,}$/i.test(kw)) {
-      enhanced += ` site:${kw}`;
-    } else if (kw.includes(' ')) {
-      enhanced += ` "${kw}"`;
-    } else {
-      enhanced += ` ${kw}`;
-    }
+    if (/^\d{4}$/.test(kw)) enhanced += ` ${kw}`;
+    else if (/^[a-z0-9-]+\.[a-z]{2,}$/i.test(kw)) enhanced += ` site:${kw}`;
+    else if (kw.includes(' ')) enhanced += ` "${kw}"`;
+    else enhanced += ` ${kw}`;
   }
   return enhanced;
 }
 
-// === SerpAPI: Regular search ===
+// === SerpAPI: Regular search (organic + news + shopping) ===
 export async function searchSerpAPI(query, num = 50) {
   try {
     const response = await axios.get('https://serpapi.com/search', {
@@ -59,11 +54,6 @@ export async function searchSerpAPI(query, num = 50) {
       relevanceScore: result.position ? (10 - result.position) / 10 : (10 - i) / 10,
       date: result.date || null, type: 'organic', thumbnail: result.thumbnail || '',
     }));
-    const videos = (data.video_results || []).map((result, i) => ({
-      title: result.title, url: result.link, snippet: result.snippet || '',
-      source: result.source || 'Google Videos', sourceDomain: extractDomain(result.link),
-      relevanceScore: (10 - i) / 10, date: result.date || null, type: 'video', thumbnail: result.thumbnail || '',
-    }));
     const news = (data.news_results || []).map((result, i) => ({
       title: result.title, url: result.link, snippet: result.snippet || '',
       source: result.source || 'Google News', sourceDomain: extractDomain(result.link),
@@ -74,10 +64,10 @@ export async function searchSerpAPI(query, num = 50) {
       source: 'Google Shopping', sourceDomain: extractDomain(result.link || ''),
       relevanceScore: (10 - i) / 10, date: null, type: 'shopping', thumbnail: result.thumbnail || '', price: result.price || '',
     }));
-    return { organic, videos, news, shopping };
+    return { organic, news, shopping };
   } catch (error) {
     console.error('SerpAPI error:', error.message);
-    return { organic: [], videos: [], news: [], shopping: [] };
+    return { organic: [], news: [], shopping: [] };
   }
 }
 
@@ -100,9 +90,27 @@ export async function searchSerpAPIImages(query, num = 10) {
   }
 }
 
-// === DuckDuckGo (free, no key) — fixed with POST + better headers ===
+// === SerpAPI: Videos (dedicated call for YouTube, Vimeo, etc.) ===
+export async function searchSerpAPIVideos(query, num = 25) {
+  try {
+    const response = await axios.get('https://serpapi.com/search', {
+      params: { q: query, api_key: SERPAPI_KEY, engine: 'google', tbm: 'vid', num },
+      timeout: 10000,
+    });
+    return (response.data.video_results || []).slice(0, num).map((result, i) => ({
+      title: result.title, url: result.link, snippet: result.snippet || '',
+      source: result.source || 'Google Videos', sourceDomain: extractDomain(result.link),
+      relevanceScore: (10 - i) / 10, date: result.date || null, type: 'video',
+      thumbnail: result.thumbnail || '', duration: result.duration || '',
+    }));
+  } catch (error) {
+    console.error('SerpAPI Videos error:', error.message);
+    return [];
+  }
+}
+
+// === DuckDuckGo (free, no key) ===
 export async function searchDuckDuckGo(query, maxResults = 50) {
-  // Try POST to HTML endpoint first
   try {
     const response = await axios.post('https://html.duckduckgo.com/html/',
       new URLSearchParams({ q: query, b: '', kl: 'us-en' }).toString(),
@@ -123,16 +131,10 @@ export async function searchDuckDuckGo(query, maxResults = 50) {
   } catch (error) {
     console.error('DDG POST error:', error.message);
   }
-
-  // Fallback: lite endpoint
   try {
     const response = await axios.get('https://lite.duckduckgo.com/lite/', {
       params: { q: query, kl: 'us-en' },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       timeout: 10000,
     });
     return parseDDGLite(response.data, maxResults);
@@ -169,48 +171,26 @@ function parseDDGHtml(html, maxResults) {
 function parseDDGLite(html, maxResults) {
   const $ = cheerio.load(html);
   const results = [];
-  $('table.results-table tr').each((i, elem) => {
+  $('a[href*="uddg="]').each((i, elem) => {
     if (i >= maxResults) return false;
-    const link = $(elem).find('a.result-link');
-    const title = link.text().trim();
-    const rawUrl = link.attr('href');
-    const snippet = $(elem).find('td.result-snippet').text().trim();
+    const title = $(elem).text().trim();
+    const rawUrl = $(elem).attr('href');
     if (title && rawUrl) {
-      let cleanUrl = rawUrl;
-      if (rawUrl.includes('uddg=')) {
-        const match = rawUrl.match(/uddg=([^&]+)/);
-        if (match) cleanUrl = decodeURIComponent(match[1]);
+      const match = rawUrl.match(/uddg=([^&]+)/);
+      if (match) {
+        const cleanUrl = decodeURIComponent(match[1]);
+        results.push({
+          title, url: cleanUrl, snippet: '', source: 'DuckDuckGo',
+          sourceDomain: extractDomain(cleanUrl), relevanceScore: (maxResults - i) / maxResults,
+          date: null, type: 'organic', thumbnail: '',
+        });
       }
-      results.push({
-        title, url: cleanUrl, snippet, source: 'DuckDuckGo',
-        sourceDomain: extractDomain(cleanUrl), relevanceScore: (maxResults - i) / maxResults,
-        date: null, type: 'organic', thumbnail: '',
-      });
     }
   });
-  // Fallback: try generic links if structured parsing fails
-  if (results.length === 0) {
-    $('a[href*="uddg="]').each((i, elem) => {
-      if (i >= maxResults) return false;
-      const title = $(elem).text().trim();
-      const rawUrl = $(elem).attr('href');
-      if (title && rawUrl) {
-        const match = rawUrl.match(/uddg=([^&]+)/);
-        if (match) {
-          const cleanUrl = decodeURIComponent(match[1]);
-          results.push({
-            title, url: cleanUrl, snippet: '', source: 'DuckDuckGo',
-            sourceDomain: extractDomain(cleanUrl), relevanceScore: (maxResults - i) / maxResults,
-            date: null, type: 'organic', thumbnail: '',
-          });
-        }
-      }
-    });
-  }
   return results;
 }
 
-// === Searx (free meta-search, multiple instances) ===
+// === Searx (free meta-search) ===
 const SEARX_INSTANCES = ['https://searx.be', 'https://search.mdosch.de', 'https://searx.tiekoetter.com'];
 
 export async function searchSearx(query, maxResults = 50) {
@@ -222,7 +202,6 @@ export async function searchSearx(query, maxResults = 50) {
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       });
       if (response.data.results && response.data.results.length > 0) {
-        console.log(`Searx (${instance}) returned ${response.data.results.length} results`);
         return response.data.results.slice(0, maxResults).map((result, i) => ({
           title: result.title || 'Untitled', url: result.url,
           snippet: result.content || '', source: 'Searx',
@@ -271,7 +250,7 @@ function getDemoResults(query) {
   return result;
 }
 
-// === Main fetch: returns categorized results ===
+// === Main fetch ===
 export async function fetchSearchResults(query, options = {}) {
   const resultCounts = options.resultCounts || { all: 50, images: 10, videos: 25, news: 15, shopping: 15 };
   const categorized = { all: [], images: [], videos: [], news: [], shopping: [] };
@@ -280,61 +259,56 @@ export async function fetchSearchResults(query, options = {}) {
     console.log('Searching with SerpAPI...');
     const serpResults = await searchSerpAPI(query, resultCounts.all);
     categorized.all = serpResults.organic.slice(0, resultCounts.all);
-    categorized.videos = serpResults.videos.slice(0, resultCounts.videos);
     categorized.news = serpResults.news.slice(0, resultCounts.news);
     categorized.shopping = serpResults.shopping.slice(0, resultCounts.shopping);
 
     console.log('Fetching images from SerpAPI...');
     categorized.images = await searchSerpAPIImages(query, resultCounts.images);
 
-    // Fill missing categories from organic by domain
-    if (categorized.videos.length < resultCounts.videos) {
-      const extra = categorized.all.filter(r => categorizeByDomain(r) === 'videos');
-      categorized.videos = [...categorized.videos, ...extra].slice(0, resultCounts.videos);
-    }
-    if (categorized.news.length < resultCounts.news) {
-      const extra = categorized.all.filter(r => categorizeByDomain(r) === 'news');
+    console.log('Fetching videos from SerpAPI...');
+    categorized.videos = await searchSerpAPIVideos(query, resultCounts.videos);
+
+    // Domain-based fallback ONLY for categories with very few results (don't duplicate)
+    if (categorized.news.length < 3) {
+      const existingUrls = new Set(categorized.news.map(r => r.url));
+      const extra = categorized.all.filter(r => categorizeByDomain(r) === 'news' && !existingUrls.has(r.url));
       categorized.news = [...categorized.news, ...extra].slice(0, resultCounts.news);
     }
-    if (categorized.shopping.length < resultCounts.shopping) {
-      const extra = categorized.all.filter(r => categorizeByDomain(r) === 'shopping');
+    if (categorized.shopping.length < 3) {
+      const existingUrls = new Set(categorized.shopping.map(r => r.url));
+      const extra = categorized.all.filter(r => categorizeByDomain(r) === 'shopping' && !existingUrls.has(r.url));
       categorized.shopping = [...categorized.shopping, ...extra].slice(0, resultCounts.shopping);
     }
+    if (categorized.videos.length < 3) {
+      const existingUrls = new Set(categorized.videos.map(r => r.url));
+      const extra = categorized.all.filter(r => categorizeByDomain(r) === 'videos' && !existingUrls.has(r.url));
+      categorized.videos = [...categorized.videos, ...extra].slice(0, resultCounts.videos);
+    }
   } else {
-    // FREE path: DuckDuckGo + Searx (no API key needed)
+    // FREE path: DuckDuckGo + Searx
     console.log('Searching with DuckDuckGo...');
     let organicResults = await searchDuckDuckGo(query, resultCounts.all);
-
     if (organicResults.length < 5) {
       console.log('DDG returned few results, trying Searx...');
       const searxResults = await searchSearx(query, resultCounts.all);
-      organicResults = [...organicResults, ...searxResults];
+      // Deduplicate by URL
+      const seen = new Set(organicResults.map(r => r.url));
+      organicResults = [...organicResults, ...searxResults.filter(r => !seen.has(r.url))];
     }
-
     categorized.all = organicResults.slice(0, resultCounts.all);
+    // For free path, categorize by domain (no duplication)
     categorized.videos = organicResults.filter(r => categorizeByDomain(r) === 'videos').slice(0, resultCounts.videos);
     categorized.news = organicResults.filter(r => categorizeByDomain(r) === 'news').slice(0, resultCounts.news);
     categorized.shopping = organicResults.filter(r => categorizeByDomain(r) === 'shopping').slice(0, resultCounts.shopping);
   }
 
-  // Demo mode if nothing came back
+  // Demo mode if nothing came back at all
   if (categorized.all.length === 0) {
     console.warn('No API results, using demo mode.');
     return getDemoResults(query);
   }
 
-  // Fill empty reels with subset of "all"
-  const fillEmpty = (reel, count) => {
-    if (reel.length === 0 && categorized.all.length > 0) {
-      return categorized.all.slice(0, Math.min(count, categorized.all.length));
-    }
-    return reel;
-  };
-  categorized.images = fillEmpty(categorized.images, resultCounts.images);
-  categorized.videos = fillEmpty(categorized.videos, resultCounts.videos);
-  categorized.news = fillEmpty(categorized.news, resultCounts.news);
-  categorized.shopping = fillEmpty(categorized.shopping, resultCounts.shopping);
-
+  // DON'T fill empty reels — let them show "No results" (transparent, no duplication)
   return categorized;
 }
 

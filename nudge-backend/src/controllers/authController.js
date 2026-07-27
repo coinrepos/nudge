@@ -25,7 +25,16 @@ const authController = {
       const user = result.rows[0];
       const accessToken = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || 'your_secret_key', { expiresIn: '1h' });
       const refreshToken = jwt.sign({ userId: user.id }, process.env.REFRESH_TOKEN_SECRET || 'refresh_secret', { expiresIn: '7d' });
-      res.status(201).json({ user: { id: user.id, email: user.email, username: user.username, socialCredits: user.social_credits }, accessToken, refreshToken });
+      res.status(201).json({
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          socialCredits: user.social_credits,
+        },
+        accessToken,
+        refreshToken,
+      });
     } catch (error) {
       logger.error('Registration error:', error);
       res.status(500).json({ error: 'Registration failed' });
@@ -42,7 +51,16 @@ const authController = {
       if (!await bcrypt.compare(password, user.password_hash)) return res.status(401).json({ error: 'Invalid credentials' });
       const accessToken = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || 'your_secret_key', { expiresIn: '1h' });
       const refreshToken = jwt.sign({ userId: user.id }, process.env.REFRESH_TOKEN_SECRET || 'refresh_secret', { expiresIn: '7d' });
-      res.json({ user: { id: user.id, email: user.email, username: user.username, socialCredits: user.social_credits }, accessToken, refreshToken });
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          socialCredits: user.social_credits,
+        },
+        accessToken,
+        refreshToken,
+      });
     } catch (error) {
       logger.error('Login error:', error);
       res.status(500).json({ error: 'Login failed' });
@@ -62,9 +80,21 @@ const authController = {
 
   async getProfile(req, res) {
     try {
-      const result = await pool.query('SELECT id, email, username, social_credits, created_at FROM users WHERE id = $1', [req.userId]);
+      const result = await pool.query(
+        'SELECT id, email, username, social_credits, streak_count, created_at FROM users WHERE id = $1',
+        [req.userId]
+      );
       if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-      res.json(result.rows[0]);
+      const user = result.rows[0];
+      // Return camelCase to match frontend expectations
+      res.json({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        socialCredits: user.social_credits,
+        streak: user.streak_count || 0,
+        createdAt: user.created_at,
+      });
     } catch (error) {
       logger.error('Profile fetch error:', error);
       res.status(500).json({ error: 'Failed to fetch profile' });
