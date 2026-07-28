@@ -2,6 +2,7 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem 1rem;
+  padding-bottom: 4rem;
 }
 
 .page-title {
@@ -13,12 +14,215 @@
 .page-subtitle {
   color: var(--text-muted);
   margin-bottom: 2rem;
+  font-size: 0.95rem;
 }
 
-.loading-text {
+/* Loading */
+.nc-loading {
   text-align: center;
+  padding: 4rem 1rem;
+}
+
+.nc-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: #f59e0b;
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+  animation: nc-spin 0.8s linear infinite;
+}
+
+@keyframes nc-spin {
+  to { transform: rotate(360deg); }
+}
+
+.nc-loading p {
   color: var(--text-muted);
-  padding: 3rem;
+}
+
+/* Auth prompt */
+.nc-auth-prompt {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+.nc-auth-prompt h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.nc-auth-prompt p {
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+
+.nc-login-btn {
+  display: inline-block;
+  padding: 0.75rem 2rem;
+  background: #f59e0b;
+  color: #0a0e27;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.nc-login-btn:hover {
+  opacity: 0.9;
+}
+
+/* Header */
+.nc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.nc-header .page-subtitle {
+  margin-bottom: 0;
+}
+
+.nc-withdraw-btn {
+  padding: 0.6rem 1.5rem;
+  background: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.nc-withdraw-btn:hover {
+  opacity: 0.9;
+}
+
+/* Toast */
+.nc-toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 1000;
+  animation: nc-slide-in 0.3s ease;
+  max-width: 350px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+@keyframes nc-slide-in {
+  from { transform: translateY(100px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.nc-toast-success {
+  background: #10b981;
+  color: #fff;
+}
+
+.nc-toast-info {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.nc-toast-error {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* Withdrawal form */
+.nc-withdraw-form {
+  background: var(--light);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+
+.nc-withdraw-form h3 {
+  color: var(--text);
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.nc-withdraw-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.nc-withdraw-status {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.nc-withdraw-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.nc-withdraw-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.nc-form-row {
+  margin-bottom: 1rem;
+}
+
+.nc-form-row label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.nc-form-row input,
+.nc-form-row select {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  background: var(--darker);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.nc-form-row input:focus,
+.nc-form-row select:focus {
+  border-color: #f59e0b;
+}
+
+.nc-submit-withdraw {
+  width: 100%;
+  padding: 0.75rem;
+  background: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: opacity 0.2s;
+}
+
+.nc-submit-withdraw:hover {
+  opacity: 0.9;
 }
 
 /* Stats grid */
@@ -38,7 +242,7 @@
 }
 
 .stat-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
   margin-bottom: 0.5rem;
   text-transform: uppercase;
@@ -64,22 +268,24 @@
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 
 .cash-tab {
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .cash-tab.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
+  color: #f59e0b;
+  border-bottom-color: #f59e0b;
 }
 
 .cash-tab:hover {
@@ -87,7 +293,7 @@
 }
 
 /* Transaction list */
-.transaction-list, .click-list {
+.transaction-list, .click-list, .merchant-rates {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -106,7 +312,7 @@
 }
 
 .transaction-item:hover, .click-item:hover {
-  border-color: var(--lighter);
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
 .tx-merchant, .click-merchant {
@@ -144,7 +350,7 @@
 
 .tx-status {
   font-size: 0.7rem;
-  padding: 0.1rem 0.5rem;
+  padding: 0.15rem 0.6rem;
   border-radius: 10px;
   text-transform: uppercase;
   font-weight: 600;
@@ -161,7 +367,7 @@
 }
 
 .click-url {
-  color: var(--primary);
+  color: #f59e0b;
   text-decoration: none;
 }
 
@@ -173,18 +379,87 @@
   font-size: 0.75rem;
   color: var(--text-muted);
   background: var(--darker);
-  padding: 0.15rem 0.5rem;
+  padding: 0.2rem 0.6rem;
   border-radius: 8px;
+  white-space: nowrap;
 }
 
 /* Empty state */
-.empty-state {
+.nc-empty {
   text-align: center;
-  color: var(--text-muted);
   padding: 3rem 1rem;
   background: var(--light);
   border-radius: 10px;
   border: 1px dashed var(--border);
+}
+
+.nc-empty-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 1rem;
+  opacity: 0.6;
+}
+
+.nc-empty p {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.nc-empty-hint {
+  color: var(--text-muted) !important;
+  font-weight: 400 !important;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* Merchant rates */
+.merchant-intro {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.merchant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.merchant-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--light);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  transition: border-color 0.2s;
+}
+
+.merchant-card:hover {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.merchant-name {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.merchant-domains {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.merchant-rate-badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  padding: 0.25rem 0.7rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 /* Cashback info */
@@ -197,29 +472,64 @@
 
 .cashback-info h3 {
   color: var(--text);
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   font-size: 1.1rem;
 }
 
-.cashback-info ul {
-  list-style: none;
-  padding: 0;
+.nc-steps {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.85rem;
 }
 
-.cashback-info li {
+.nc-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.nc-step-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.nc-step p {
   color: var(--text-muted);
   font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .info-note {
-  margin-top: 1rem;
-  padding-top: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
   border-top: 1px solid var(--border);
   font-size: 0.8rem;
   color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* FTC Disclosure */
+.nc-disclosure {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: var(--darker);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.nc-disclosure h4 {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.nc-disclosure p {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
   opacity: 0.8;
 }
 
@@ -227,6 +537,14 @@
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .nc-header {
+    flex-direction: column;
+  }
+
+  .nc-withdraw-btn {
+    width: 100%;
   }
 
   .transaction-item, .click-item {
@@ -239,5 +557,16 @@
     align-items: flex-start;
     flex-direction: row;
     gap: 0.75rem;
+  }
+
+  .merchant-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nc-toast {
+    right: 1rem;
+    left: 1rem;
+    max-width: none;
+    bottom: 1rem;
   }
 }

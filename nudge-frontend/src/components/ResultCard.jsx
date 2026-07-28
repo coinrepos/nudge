@@ -1,12 +1,39 @@
-import React, { useState } from 'react'
+import React, { useState, useContext } from 'react'
+import { AuthContext } from '../context/AuthContext'
 import '../styles/ResultCard.css'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export default function ResultCard({ result, compact }) {
   const [copied, setCopied] = useState(false)
+  const { accessToken } = useContext(AuthContext)
+
+  const trackAffiliateClick = async () => {
+    if (!accessToken || !result.affiliateUrl || !result.isAffiliateEligible) return
+
+    try {
+      await fetch(`${API_URL}/nudge-cash/track-click`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          originalUrl: result.url,
+          affiliateUrl: result.affiliateUrl,
+          merchant: result.merchant || result.sourceDomain,
+          searchQuery: result.searchQuery || '',
+        }),
+      })
+    } catch (err) {
+      // Silent fail — don't block the click
+    }
+  }
 
   const handleClick = () => {
     if (result.url) {
-      window.open(result.url, '_blank')
+      trackAffiliateClick()
+      window.open(result.affiliateUrl || result.url, '_blank')
     }
   }
 
@@ -29,6 +56,11 @@ export default function ResultCard({ result, compact }) {
           <span className="result-source">{result.sourceDomain || result.source || 'Unknown'}</span>
           <div className="compact-actions">
             <span className="result-relevance">{(result.relevanceScore * 100).toFixed(0)}%</span>
+            {result.isAffiliateEligible && (
+              <span className="cashback-badge" title={`${result.cashbackRate}% cashback available`}>
+                💰 {result.cashbackRate}%
+              </span>
+            )}
             <button className="share-btn compact-share" onClick={handleShare} title="Share">
               {copied ? '✓' : '📤'}
             </button>
@@ -56,10 +88,24 @@ export default function ResultCard({ result, compact }) {
         {result.date && (
           <span className="result-date">{new Date(result.date).toLocaleDateString()}</span>
         )}
+        {result.isAffiliateEligible && (
+          <span className="cashback-badge" title="Earn Nudge Cash on this purchase">
+            💰 {result.cashbackRate}% Cashback
+          </span>
+        )}
       </div>
 
       <div className="result-links">
-        <a href={result.url} target="_blank" rel="noopener noreferrer" className="result-url" onClick={(e) => e.stopPropagation()}>
+        <a
+          href={result.affiliateUrl || result.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="result-url"
+          onClick={(e) => {
+            e.stopPropagation()
+            trackAffiliateClick()
+          }}
+        >
           {result.url?.substring(0, 40)}...
         </a>
         <button className="share-btn" onClick={handleShare} title="Share result">
