@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const AMAZON_TAG = process.env.AMAZON_ASSOCIATE_TAG || '';
-const SKIMLINKS_DOMAIN = process.env.SKIMLINKS_DOMAIN || '';
+const SKIMLINKS_PUBLISHER_CODE = process.env.SKIMLINKS_PUBLISHER_CODE || '306889X1795159';
 const DEFAULT_CASHBACK_RATE = parseFloat(process.env.DEFAULT_CASHBACK_RATE || '3.50');
 
 // Known merchant cashback rates (as % of purchase)
@@ -33,18 +33,16 @@ export function wrapWithAffiliate(url, query = '') {
   const domain = extractDomain(url);
   let affiliateUrl = url;
 
-  // Amazon Associates
+  // Amazon Associates — append tag directly
   if (domain.includes('amazon.') && AMAZON_TAG) {
     const separator = url.includes('?') ? '&' : '?';
     affiliateUrl = `${url}${separator}tag=${AMAZON_TAG}`;
   }
-  // Skimlinks (wraps any merchant URL)
-  else if (SKIMLINKS_DOMAIN) {
-    affiliateUrl = `https://${SKIMLINKS_DOMAIN}?url=${encodeURIComponent(url)}`;
-  }
-  // Amazon search fallback — if no product URL but we have a query
-  else if (domain.includes('amazon.') && AMAZON_TAG && query) {
-    affiliateUrl = `https://www.amazon.com/s?k=${encodeURIComponent(query)}&tag=${AMAZON_TAG}`;
+  // Skimlinks — wraps any merchant URL via go.skimresources.com
+  // The JS snippet in index.html also auto-wraps links client-side,
+  // but we set the affiliate URL here for tracking + display purposes
+  else {
+    affiliateUrl = `https://go.skimresources.com/?id=${SKIMLINKS_PUBLISHER_CODE}&xs=1&url=${encodeURIComponent(url)}`;
   }
 
   const cashbackRate = getCashbackRate(domain);
@@ -74,11 +72,11 @@ export function calculateCashback(purchaseAmount, rate) {
 
 /**
  * Check if a URL is from a supported affiliate merchant
+ * With Skimlinks JS loaded, all merchant links are eligible
  */
 export function isAffiliateEligible(url) {
   if (!url) return false;
-  const domain = extractDomain(url);
-  return Object.keys(MERCHANT_RATES).some(m => domain.includes(m));
+  return true; // Skimlinks JS auto-wraps all eligible merchant links
 }
 
 function extractDomain(url) {
@@ -91,7 +89,7 @@ function extractDomain(url) {
 
 export const AFFILIATE_CONFIG = {
   amazonTag: AMAZON_TAG,
-  skimlinksDomain: SKIMLINKS_DOMAIN,
+  skimlinksPublisherCode: SKIMLINKS_PUBLISHER_CODE,
   defaultRate: DEFAULT_CASHBACK_RATE,
   merchantRates: MERCHANT_RATES,
 };
