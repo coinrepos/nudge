@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import { fetchSearchResults, calculateRelevanceScore, checkWinningCombination, enhanceQuery } from '../config/searchApis.js';
+import { wrapWithAffiliate, isAffiliateEligible } from '../config/affiliateLinks.js';
 import logger from '../utils/logger.js';
 
 const DEFAULT_RESULT_COUNTS = { all: 50, images: 10, videos: 25, news: 15, shopping: 15 };
@@ -27,6 +28,20 @@ const searchController = {
 
       if (totalResults === 0) {
         return res.status(404).json({ error: 'No results found' });
+      }
+
+      // Wrap Shopping reel results with affiliate links + cashback info
+      if (categorizedResults.shopping && categorizedResults.shopping.length > 0) {
+        categorizedResults.shopping = categorizedResults.shopping.map(result => {
+          const affiliate = wrapWithAffiliate(result.url, query);
+          return {
+            ...result,
+            affiliateUrl: affiliate.affiliateUrl,
+            cashbackRate: affiliate.cashbackRate,
+            merchant: affiliate.merchant,
+            isAffiliateEligible: isAffiliateEligible(result.url),
+          };
+        });
       }
 
       const isWinning = checkWinningCombination(categorizedResults);

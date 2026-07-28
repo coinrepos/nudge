@@ -7,6 +7,7 @@ import SearchPage from './pages/SearchPage'
 import AuthPage from './pages/AuthPage'
 import ProfilePage from './pages/ProfilePage'
 import LeaderboardPage from './pages/LeaderboardPage'
+import NudgeCashPage from './pages/NudgeCashPage'
 import './styles/App.css'
 
 class ErrorBoundary extends React.Component {
@@ -46,11 +47,12 @@ function App() {
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/profile" element={auth.user ? <ProfilePage /> : <AuthPage />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />
+              <Route path="/nudge-cash" element={auth.user ? <NudgeCashPage /> : <AuthPage />} />
             </Routes>
           </main>
           <footer className="app-footer">
             <p>Nudge — Spin to discover. Explore to earn.</p>
-            <p className="footer-note">Social credits are purely cosmetic. No monetization, no dark patterns.</p>
+            <p className="footer-note">Social credits are purely cosmetic. Nudge Cash is real cashback from shopping. No dark patterns.</p>
           </footer>
         </ErrorBoundary>
       </Router>

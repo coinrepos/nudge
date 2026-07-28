@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import searchRoutes from './routes/search.js';
 import creditRoutes from './routes/credits.js';
 import leaderboardRoutes from './routes/leaderboard.js';
+import nudgeCashRoutes from './routes/nudgeCash.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { pool } from './config/database.js';
 import logger from './utils/logger.js';
@@ -16,6 +17,10 @@ import logger from './utils/logger.js';
 dotenv.config();
 
 const app = express();
+
+// Trust proxy — Railway runs behind a reverse proxy
+app.set('trust proxy', 1);
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: { origin: process.env.FRONTEND_URL || 'http://localhost:5173' },
@@ -42,6 +47,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/nudge-cash', nudgeCashRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });

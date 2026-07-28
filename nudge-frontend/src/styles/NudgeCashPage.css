@@ -1,0 +1,243 @@
+.nudge-cash-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+
+.loading-text {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 3rem;
+}
+
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--light);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-balance { border-color: rgba(16, 185, 129, 0.3); }
+.stat-balance .stat-value { color: #10b981; }
+
+.stat-pending { border-color: rgba(245, 158, 11, 0.3); }
+.stat-pending .stat-value { color: #f59e0b; }
+
+/* Tabs */
+.cash-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.cash-tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.cash-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.cash-tab:hover {
+  color: var(--text);
+}
+
+/* Transaction list */
+.transaction-list, .click-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.transaction-item, .click-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: var(--light);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  transition: border-color 0.2s;
+}
+
+.transaction-item:hover, .click-item:hover {
+  border-color: var(--lighter);
+}
+
+.tx-merchant, .click-merchant {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.tx-product, .click-url {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}
+
+.tx-date, .click-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.tx-aside {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.tx-amount {
+  font-weight: 700;
+  color: #10b981;
+  font-size: 1.1rem;
+}
+
+.tx-status {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.status-pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.status-confirmed { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.status-paid { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
+.status-cancelled { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+.tx-rate {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.click-url {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.click-url:hover {
+  text-decoration: underline;
+}
+
+.click-query {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--darker);
+  padding: 0.15rem 0.5rem;
+  border-radius: 8px;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 3rem 1rem;
+  background: var(--light);
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+}
+
+/* Cashback info */
+.cashback-info {
+  background: var(--light);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+.cashback-info h3 {
+  color: var(--text);
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.cashback-info ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cashback-info li {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.info-note {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .transaction-item, .click-item {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tx-aside {
+    text-align: left;
+    align-items: flex-start;
+    flex-direction: row;
+    gap: 0.75rem;
+  }
+}

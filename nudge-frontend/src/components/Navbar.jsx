@@ -2,6 +2,7 @@ import React, { useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AuthContext } from '../context/AuthContext'
 import CreditDisplay from './CreditDisplay'
+import NudgeCashDisplay from './NudgeCashDisplay'
 import '../styles/Navbar.css'
 
 export default function Navbar() {
@@ -29,12 +30,16 @@ export default function Navbar() {
 
           {/* Leaderboard only visible when logged in */}
           {user && (
-            <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
+            <>
+              <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
+              <Link to="/nudge-cash" className="nav-link">Nudge Cash</Link>
+            </>
           )}
 
           {user ? (
             <>
               <CreditDisplay credits={user.socialCredits} />
+              <NudgeCashDisplay />
               <Link to="/profile" className="nav-link">{user.username}</Link>
               <button onClick={handleLogout} className="nav-btn logout">Logout</button>
             </>

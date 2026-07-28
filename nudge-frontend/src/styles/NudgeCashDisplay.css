@@ -1,0 +1,32 @@
+.nudge-cash-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: #10b981;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.nudge-cash-display:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.cash-icon {
+  font-size: 0.9rem;
+}
+
+.cash-amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-pending {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
