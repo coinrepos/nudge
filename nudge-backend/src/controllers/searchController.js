@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import { fetchSearchResults, calculateRelevanceScore, checkWinningCombination, enhanceQuery } from '../config/searchApis.js';
 import { wrapWithAffiliate, isAffiliateEligible } from '../config/affiliateLinks.js';
+import sportsService from '../config/sportsService.js';
 import logger from '../utils/logger.js';
 
 const DEFAULT_RESULT_COUNTS = { all: 50, images: 10, videos: 25, news: 15, shopping: 15 };
@@ -46,6 +47,37 @@ const searchController = {
 
       const isWinning = checkWinningCombination(categorizedResults);
       const relevanceRating = calculateRelevanceScore(categorizedResults);
+
+      // Detect sports queries and fetch relevant sports data
+      let sportsData = null;
+      const sportsMatch = sportsService.detectSportsQuery(query);
+      if (sportsMatch) {
+        try {
+          const leagueData = await Promise.all(
+            sportsMatch.suggestedLeagues.map(async (leagueId) => {
+              const [upcoming, recent] = await Promise.all([
+                sportsService.getNextLeagueEvents(leagueId),
+                sportsService.getPastLeagueEvents(leagueId),
+              ]);
+              const details = await sportsService.getLeagueDetails(leagueId);
+              return {
+                league: details?.strLeague || `League ${leagueId}`,
+                leagueId,
+                upcoming: upcoming.slice(0, 3),
+                recent: recent.slice(0, 3),
+              };
+            })
+          );
+          sportsData = {
+            matched: true,
+            type: sportsMatch.type,
+            query: sportsMatch.query,
+            leagues: leagueData,
+          };
+        } catch (err) {
+          logger.warn('Sports data fetch failed for query:', query, err.message);
+        }
+      }
 
       let streakInfo = null;
 
@@ -95,6 +127,7 @@ const searchController = {
         isWinning,
         relevanceRating,
         streakInfo,
+        sportsData,
       });
     } catch (error) {
       logger.error('Search error:', error);

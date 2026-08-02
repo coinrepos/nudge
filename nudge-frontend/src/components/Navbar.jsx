@@ -27,6 +27,7 @@ export default function Navbar() {
 
         <div className="navbar-menu">
           <Link to="/" className="nav-link">Search</Link>
+          <Link to="/sports" className="nav-link">Sports</Link>
 
           {/* Leaderboard only visible when logged in */}
           {user && (

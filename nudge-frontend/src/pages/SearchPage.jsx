@@ -6,6 +6,8 @@ import SuperNudge from '../components/SuperNudge'
 import useSearch from '../hooks/useSearch'
 import useCredits from '../hooks/useCredits'
 import '../styles/SearchPage.css'
+import AffiliateDisclosure from '../components/AffiliateDisclosure'
+import SportsInfoCard from '../components/SportsInfoCard'
 
 export default function SearchPage() {
   const { user, accessToken } = useContext(AuthContext)
@@ -87,6 +89,9 @@ export default function SearchPage() {
                 <span className="winning-indicator">🎉 WINNING!</span>
               )}
             </div>
+
+              <AffiliateDisclosure variant="compact" />
+              {searchResults?.sportsData && <SportsInfoCard sportsData={searchResults.sportsData} />}
 
             <ReelSpinner
               reels={reels}

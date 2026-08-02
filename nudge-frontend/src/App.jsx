@@ -8,6 +8,8 @@ import AuthPage from './pages/AuthPage'
 import ProfilePage from './pages/ProfilePage'
 import LeaderboardPage from './pages/LeaderboardPage'
 import NudgeCashPage from './pages/NudgeCashPage'
+import SportsPage from './pages/SportsPage'
+import TermsPage from './pages/TermsPage'
 import './styles/App.css'
 
 class ErrorBoundary extends React.Component {
@@ -48,11 +50,21 @@ function App() {
               <Route path="/profile" element={auth.user ? <ProfilePage /> : <AuthPage />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />
               <Route path="/nudge-cash" element={auth.user ? <NudgeCashPage /> : <AuthPage />} />
+              <Route path="/sports" element={<SportsPage />} />
+              <Route path="/terms" element={<TermsPage />} />
             </Routes>
           </main>
           <footer className="app-footer">
             <p>Nudge — Spin to discover. Explore to earn.</p>
             <p className="footer-note">Social credits are purely cosmetic. Nudge Cash is real cashback from shopping. No dark patterns.</p>
+            <p className="footer-disclosure">
+              Nudge participates in affiliate programs including Amazon Associates and Skimlinks. When you shop through links on the Shopping reel, we may earn a commission at no extra cost to you. This does not influence search results. <a href="/terms">Full disclosure &amp; Terms →</a>
+            </p>
+            <div className="footer-legal-links">
+              <a href="/terms">Terms &amp; Conditions</a>
+              <a href="/terms">Affiliate Disclosure</a>
+              <a href="/terms">Privacy</a>
+            </div>
           </footer>
         </ErrorBoundary>
       </Router>

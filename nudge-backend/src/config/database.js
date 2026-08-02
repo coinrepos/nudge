@@ -1,9 +1,13 @@
 import pg from 'pg';
+import dns from 'dns';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const { Pool } = pg;
+
+// Force IPv4 resolution to avoid ENETUNREACH on IPv6-only networks (Railway)
+dns.setDefaultResultOrder('ipv4first');
 
 // Support both DATABASE_URL (Supabase connection string) and individual env vars
 let pool;

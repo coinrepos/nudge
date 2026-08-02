@@ -1,0 +1,97 @@
+/* === Affiliate Disclosure === */
+
+.affiliate-disclosure--banner {
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  color: var(--text);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.affiliate-disclosure--banner .disclosure-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.affiliate-disclosure--banner .disclosure-icon {
+  font-size: 1.1rem;
+}
+
+.affiliate-disclosure--banner p {
+  margin: 0.5rem 0;
+}
+
+.affiliate-disclosure--banner .disclosure-legal {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  border-top: 1px solid rgba(245, 158, 11, 0.15);
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.disclosure-link {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.disclosure-link:hover {
+  opacity: 0.8;
+}
+
+/* Badge variant (small, inline) */
+.affiliate-disclosure--badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 2rem;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Compact variant (single paragraph) */
+.affiliate-disclosure--compact {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0.5rem 0;
+  opacity: 0.9;
+}
+
+/* === Footer Disclosure === */
+
+.footer-disclosure {
+  margin-top: 0.75rem;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  opacity: 0.75;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.footer-legal-links {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.footer-legal-links a {
+  color: var(--text-muted);
+  text-decoration: underline;
+  font-size: 0.75rem;
+}
+
+.footer-legal-links a:hover {
+  color: var(--primary);
+}

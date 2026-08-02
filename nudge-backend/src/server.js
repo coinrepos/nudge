@@ -10,6 +10,7 @@ import searchRoutes from './routes/search.js';
 import creditRoutes from './routes/credits.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import nudgeCashRoutes from './routes/nudgeCash.js';
+import sportsRoutes from './routes/sports.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { pool } from './config/database.js';
 import logger from './utils/logger.js';
@@ -48,6 +49,7 @@ app.use('/api/search', searchRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/nudge-cash', nudgeCashRoutes);
+app.use('/api/sports', sportsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });

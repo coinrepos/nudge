@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { AuthContext } from '../context/AuthContext'
 import '../styles/NudgeCashPage.css'
+import AffiliateDisclosure from '../components/AffiliateDisclosure'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -160,6 +161,9 @@ export default function NudgeCashPage() {
       </div>
 
       {/* Stats grid */}
+      {/* FTC Affiliate Disclosure */}
+      <AffiliateDisclosure variant="banner" />
+
       <div className="stats-grid">
         <div className="stat-card stat-balance">
           <p className="stat-label">Available Balance</p>
