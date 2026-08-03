@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
@@ -34,6 +35,25 @@ app.use(compression());
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' }));
 app.use(express.json({ limit: '1mb' }));
 
+// Global rate limiter — 100 req/min per IP
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests, please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', globalLimiter);
+
+// Search-specific limiter — 30 searches/min per IP
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Search rate limit exceeded. Please wait a moment.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 io.on('connection', (socket) => {
   logger.info(`User connected: ${socket.id}`);
   socket.on('disconnect', () => {
@@ -50,15 +70,17 @@ app.get('/api/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/search', searchRoutes);
+app.use('/api/search/query', searchLimiter, searchRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/nudge-cash', nudgeCashRoutes);
 app.use('/api/sports', sportsRoutes);
 
-// Cache-control for static-ish responses
+// Cache-control for public GET endpoints
 app.use('/api/sports', (req, res, next) => {
-  res.set('Cache-Control', 'public, max-age=300'); // 5 min cache for sports data
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=300');
+  }
   next();
 });
 

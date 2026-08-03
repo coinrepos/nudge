@@ -7,6 +7,19 @@
 
 import logger from '../utils/logger.js';
 
+// Fetch with timeout — prevents hangs on slow API responses
+async function fetchWithTimeout(url, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 const API_KEY = process.env.THESPORTSDB_KEY || '123';
 const BASE_URL = `https://www.thesportsdb.com/api/v1/json/${API_KEY}`;
 
@@ -47,8 +60,7 @@ const sportsService = {
    */
   async getAllSports() {
     try {
-      const res = await fetch(`${BASE_URL}/all_sports.php`);
-      const data = await res.json();
+      const data = await fetchWithTimeout(`${BASE_URL}/all_sports.php`);
       return data.sports || [];
     } catch (err) {
       logger.error('SportsDB: Failed to fetch sports:', err.message);
@@ -61,8 +73,7 @@ const sportsService = {
    */
   async getAllLeagues() {
     try {
-      const res = await fetch(`${BASE_URL}/all_leagues.php`);
-      const data = await res.json();
+      const data = await fetchWithTimeout(`${BASE_URL}/all_leagues.php`);
       return data.leagues || [];
     } catch (err) {
       logger.error('SportsDB: Failed to fetch leagues:', err.message);
@@ -76,8 +87,7 @@ const sportsService = {
   async getTodayEvents() {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const res = await fetch(`${BASE_URL}/eventsday.php?d=${today}&s=All_Sports`);
-      const data = await res.json();
+      const data = await fetchWithTimeout(`${BASE_URL}/eventsday.php?d=${today}&s=All_Sports`);
       return (data.events || []).map(e => this._formatEvent(e));
     } catch (err) {
       logger.error('SportsDB: Failed to fetch today events:', err.message);
@@ -90,8 +100,7 @@ const sportsService = {
    */
   async getEventsByDate(date) {
     try {
-      const res = await fetch(`${BASE_URL}/eventsday.php?d=${date}&s=All_Sports`);
-      const data = await res.json();
+      const data = await fetchWithTimeout(`${BASE_URL}/eventsday.php?d=${date}&s=All_Sports`);
       return (data.events || []).map(e => this._formatEvent(e));
     } catch (err) {
       logger.error('SportsDB: Failed to fetch date events:', err.message);
@@ -104,8 +113,7 @@ const sportsService = {
    */
   async getNextLeagueEvents(leagueId) {
     try {
-      const res = await fetch(`${BASE_URL}/eventsnextleague.php?id=${leagueId}`);
-      const data = await res.json();
+      const data = await fetchWithTimeout(`${BASE_URL}/eventsnextleague.php?id=${leagueId}`);
       return (data.events || []).map(e => this._formatEvent(e));
     } catch (err) {
       logger.error('SportsDB: Failed to fetch next league events:', err.message);
@@ -118,8 +126,7 @@ const sportsService = {
    */
   async getPastLeagueEvents(leagueId) {
     try {
-      const res = await fetch(`${BASE_URL}/eventspastleague.php?id=${leagueId}`);
-      const data = await res.json();
+      const data = await fetchWithTimeout(`${BASE_URL}/eventspastleague.php?id=${leagueId}`);
       return (data.events || []).map(e => this._formatEvent(e));
     } catch (err) {
       logger.error('SportsDB: Failed to fetch past league events:', err.message);
@@ -134,8 +141,7 @@ const sportsService = {
     try {
       let url = `${BASE_URL}/lookuptable.php?l=${leagueId}`;
       if (season) url += `&s=${season}`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await fetchWithTimeout(url);
       return (data.table || []).map(t => ({
         rank: parseInt(t.intRank) || 0,
         team: t.strTeam,
@@ -162,8 +168,7 @@ const sportsService = {
    */
   async getLeagueDetails(leagueId) {
     try {
-      const res = await fetch(`${BASE_URL}/lookupleague.php?id=${leagueId}`);
-      const data = await res.json();
+      const data = await fetchWithTimeout(`${BASE_URL}/lookupleague.php?id=${leagueId}`);
       return (data.leagues && data.leagues[0]) || null;
     } catch (err) {
       logger.error('SportsDB: Failed to fetch league details:', err.message);
@@ -176,8 +181,7 @@ const sportsService = {
    */
   async getTeamDetails(teamId) {
     try {
-      const res = await fetch(`${BASE_URL}/lookupteam.php?id=${teamId}`);
-      const data = await res.json();
+      const data = await fetchWithTimeout(`${BASE_URL}/lookupteam.php?id=${teamId}`);
       return (data.teams && data.teams[0]) || null;
     } catch (err) {
       logger.error('SportsDB: Failed to fetch team details:', err.message);
@@ -190,8 +194,7 @@ const sportsService = {
    */
   async getNextTeamEvents(teamId) {
     try {
-      const res = await fetch(`${BASE_URL}/eventsnextteam.php?id=${teamId}`);
-      const data = await res.json();
+      const data = await fetchWithTimeout(`${BASE_URL}/eventsnextteam.php?id=${teamId}`);
       return (data.events || []).map(e => this._formatEvent(e));
     } catch (err) {
       logger.error('SportsDB: Failed to fetch team events:', err.message);

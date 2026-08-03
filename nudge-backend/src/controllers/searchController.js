@@ -3,6 +3,7 @@ import { fetchSearchResults, calculateRelevanceScore, checkWinningCombination, e
 import { wrapWithAffiliate, isAffiliateEligible } from '../config/affiliateLinks.js';
 import sportsService from '../config/sportsService.js';
 import { getCached, setCached, makeCacheKey } from '../middleware/searchCache.js';
+// Note: trending is also cached via the same cache utility
 import logger from '../utils/logger.js';
 
 const DEFAULT_RESULT_COUNTS = { all: 50, images: 10, videos: 25, news: 15, shopping: 15 };
@@ -175,6 +176,10 @@ const searchController = {
 
   async getTrendingSearches(req, res) {
     try {
+      // Check cache first (5 min TTL)
+      const cachedTrending = getCached('trending_searches');
+      if (cachedTrending) return res.json(cachedTrending);
+
       const result = await pool.query(
         `SELECT query, COUNT(*) as search_count
          FROM search_history
@@ -194,6 +199,7 @@ const searchController = {
         ]);
       }
 
+      setCached('trending_searches', result.rows, 300_000); // 5 min cache
       res.json(result.rows);
     } catch (error) {
       logger.error('Trending fetch error:', error);
