@@ -4,7 +4,7 @@ import '../styles/ResultCard.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-export default function ResultCard({ result, compact }) {
+export default function ResultCard({ result, compact, onOpenDetail }) {
   const [copied, setCopied] = useState(false)
   const { accessToken } = useContext(AuthContext)
 
@@ -13,6 +13,7 @@ export default function ResultCard({ result, compact }) {
 
     try {
       await fetch(`${API_URL}/nudge-cash/track-click`, {
+        method: 'Content-Type',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -30,8 +31,19 @@ export default function ResultCard({ result, compact }) {
     }
   }
 
-  const handleClick = () => {
+  const handleVisit = (e) => {
+    if (e) e.stopPropagation()
     if (result.url) {
+      trackAffiliateClick()
+      window.open(result.affiliateUrl || result.url, '_blank')
+    }
+  }
+
+  // In compact mode (reels), clicking opens the detail modal instead of visiting
+  const handleCardClick = () => {
+    if (compact && onOpenDetail) {
+      onOpenDetail(result)
+    } else if (result.url) {
       trackAffiliateClick()
       window.open(result.affiliateUrl || result.url, '_blank')
     }
@@ -50,12 +62,12 @@ export default function ResultCard({ result, compact }) {
 
   if (compact) {
     return (
-      <div className="result-card compact" onClick={handleClick}>
+      <div className="result-card compact clickable" onClick={handleCardClick} title="Click for details">
         <h3 className="result-title">{result.title || 'Untitled'}</h3>
         <div className="compact-footer">
           <span className="result-source">{result.sourceDomain || result.source || 'Unknown'}</span>
           <div className="compact-actions">
-            <span className="result-relevance">{(result.relevanceScore * 100).toFixed(0)}%</span>
+            <span className="result-relevance">{((result.relevanceScore || 0) * 100).toFixed(0)}%</span>
             {result.isAffiliateEligible && (
               <span className="cashback-badge" title={`${result.cashbackRate}% cashback available`}>
                 💰 {result.cashbackRate}%
@@ -66,12 +78,13 @@ export default function ResultCard({ result, compact }) {
             </button>
           </div>
         </div>
+        <span className="reel-symbol-click-hint">tap →</span>
       </div>
     )
   }
 
   return (
-    <div className="result-card" onClick={handleClick}>
+    <div className="result-card" onClick={handleCardClick}>
       <div className="result-header">
         <h3 className="result-title">{result.title || 'Untitled'}</h3>
         <span className="result-source">{result.source || 'Unknown'}</span>
@@ -83,7 +96,7 @@ export default function ResultCard({ result, compact }) {
 
       <div className="result-footer">
         <span className="result-relevance">
-          Relevance: {(result.relevanceScore * 100).toFixed(0)}%
+          Relevance: {((result.relevanceScore || 0) * 100).toFixed(0)}%
         </span>
         {result.date && (
           <span className="result-date">{new Date(result.date).toLocaleDateString()}</span>

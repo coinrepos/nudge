@@ -687,3 +687,75 @@
   color: var(--text-muted);
   font-size: 0.85rem;
 }
+
+/* === Search result modal extras === */
+.result-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text, #f8fafc);
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.result-modal-snippet {
+  font-size: 0.85rem;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.result-modal-url {
+  font-size: 0.72rem;
+  color: var(--primary, #f59e0b);
+  word-break: break-all;
+}
+
+.affiliate-row {
+  background: rgba(245, 158, 11, 0.08) !important;
+  border-radius: 0.4rem;
+}
+
+.affiliate-row .info-value {
+  color: var(--primary, #f59e0b);
+  font-weight: 700;
+}
+
+.sports-modal-action-btn.secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted, #94a3b8);
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+}
+
+.sports-modal-action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Clickable result cards in reels */
+.result-card.clickable {
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.result-card.clickable:hover {
+  background: rgba(245, 158, 11, 0.06);
+  transform: scale(1.02);
+}
+
+.result-card .reel-symbol-click-hint {
+  position: absolute;
+  bottom: 0.25rem;
+  right: 0.3rem;
+  font-size: 0.55rem;
+  color: var(--text-muted, #94a3b8);
+  opacity: 0.4;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.result-card.clickable:hover .reel-symbol-click-hint {
+  opacity: 1;
+  color: var(--primary, #f59e0b);
+}

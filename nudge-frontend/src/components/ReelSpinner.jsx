@@ -12,11 +12,77 @@ const CATEGORIES = [
 
 const SYMBOL_HEIGHT = 110
 
+// === Search Result Detail Modal ===
+function ResultModal({ result, onClose }) {
+  if (!result) return null
+
+  const handleVisit = () => {
+    if (result.url) window.open(result.affiliateUrl || result.url, '_blank')
+  }
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: result.title, url: result.url })
+    } else {
+      navigator.clipboard.writeText(result.url)
+    }
+  }
+
+  return (
+    <div className="sports-modal-overlay" onClick={onClose}>
+      <div className="sports-modal" onClick={e => e.stopPropagation()}>
+        <button className="sports-modal-close" onClick={onClose}>✕</button>
+
+        <div className="sports-modal-league">{result.sourceDomain || result.source || 'Search Result'}</div>
+
+        <h2 className="result-modal-title">{result.title || 'Untitled'}</h2>
+
+        {result.snippet && (
+          <p className="result-modal-snippet">{result.snippet}</p>
+        )}
+
+        <div className="sports-modal-info">
+          <div className="sports-modal-info-row">
+            <span className="info-label">📊 Relevance</span>
+            <span className="info-value">{((result.relevanceScore || 0) * 100).toFixed(0)}%</span>
+          </div>
+          {result.date && (
+            <div className="sports-modal-info-row">
+              <span className="info-label">📅 Date</span>
+              <span className="info-value">{new Date(result.date).toLocaleDateString()}</span>
+            </div>
+          )}
+          {result.isAffiliateEligible && (
+            <div className="sports-modal-info-row affiliate-row">
+              <span className="info-label">💰 Cashback</span>
+              <span className="info-value">{result.cashbackRate}% Nudge Cash</span>
+            </div>
+          )}
+          <div className="sports-modal-info-row">
+            <span className="info-label">🔗 URL</span>
+            <span className="info-value result-modal-url">{result.url?.substring(0, 50)}{(result.url?.length > 50) ? '...' : ''}</span>
+          </div>
+        </div>
+
+        <div className="sports-modal-actions">
+          <button className="sports-modal-action-btn" onClick={handleVisit}>
+            🔗 Visit Site
+          </button>
+          <button className="sports-modal-action-btn secondary" onClick={handleShare}>
+            📤 Share
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMode, onResultModeChange }) {
   const [isSpinning, setIsSpinning] = useState(false)
   const [activeCategory, setActiveCategory] = useState('all')
   const [spinningReels, setSpinningReels] = useState({})
   const [finalPositions, setFinalPositions] = useState({})
+  const [selectedResult, setSelectedResult] = useState(null)
   const timersRef = useRef([])
 
   useEffect(() => {
@@ -88,87 +154,96 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
   }
 
   return (
-    <div className="slot-machine">
-      {/* Category buttons + mode toggle */}
-      <div className="reel-controls">
-        <div className="category-buttons">
-          {CATEGORIES.map(cat => {
-            const count = (displayedReels[cat.key] || []).length
+    <>
+      <div className="slot-machine">
+        {/* Category buttons + mode toggle */}
+        <div className="reel-controls">
+          <div className="category-buttons">
+            {CATEGORIES.map(cat => {
+              const count = (displayedReels[cat.key] || []).length
+              return (
+                <button
+                  key={cat.key}
+                  className={`cat-btn ${activeCategory === cat.key ? 'active' : ''}`}
+                  onClick={() => setActiveCategory(cat.key)}
+                >
+                  {cat.icon} {cat.label}
+                  {count > 0 && <span className="cat-count">{count}</span>}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="mode-toggle">
+            <button
+              className={`mode-btn ${resultMode === 'top' ? 'active' : ''}`}
+              onClick={() => onResultModeChange('top')}
+            >Top Results</button>
+            <button
+              className={`mode-btn ${resultMode === 'random' ? 'active' : ''}`}
+              onClick={() => onResultModeChange('random')}
+            >🎲 Random</button>
+          </div>
+        </div>
+
+        {/* Reels */}
+        <div className="slot-reels">
+          {visibleCats.map((cat) => {
+            const reel = displayedReels[cat.key] || []
             return (
-              <button
-                key={cat.key}
-                className={`cat-btn ${activeCategory === cat.key ? 'active' : ''}`}
-                onClick={() => setActiveCategory(cat.key)}
-              >
-                {cat.icon} {cat.label}
-                {count > 0 && <span className="cat-count">{count}</span>}
-              </button>
+              <div className="slot-reel" key={cat.key}>
+                <div className="reel-label">{cat.icon} {cat.label}</div>
+                <div
+                  className="reel-viewport"
+                  style={{ height: visibleSymbols * SYMBOL_HEIGHT }}
+                >
+                  <div
+                    className={`reel-track ${spinningReels[cat.key] ? 'spinning' : ''}`}
+                    style={{
+                      transform: spinningReels[cat.key]
+                        ? undefined
+                        : `translateY(-${finalPositions[cat.key] || 0}px)`,
+                      transition: spinningReels[cat.key] ? 'none' : 'transform 0.5s ease-out',
+                    }}
+                  >
+                    {reel.length > 0 ? (
+                      reel.map((result, i) => (
+                        <div className="reel-symbol" key={i} style={{ height: SYMBOL_HEIGHT }}>
+                          <ResultCard
+                            result={result}
+                            compact
+                            onOpenDetail={setSelectedResult}
+                          />
+                        </div>
+                      ))
+                    ) : (
+                      <div className="reel-symbol empty-symbol" style={{ height: SYMBOL_HEIGHT }}>
+                        <span>No results</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             )
           })}
         </div>
 
-        <div className="mode-toggle">
-          <button
-            className={`mode-btn ${resultMode === 'top' ? 'active' : ''}`}
-            onClick={() => onResultModeChange('top')}
-          >Top Results</button>
-          <button
-            className={`mode-btn ${resultMode === 'random' ? 'active' : ''}`}
-            onClick={() => onResultModeChange('random')}
-          >🎲 Random</button>
-        </div>
+        {/* Spin button */}
+        <button
+          onClick={handleSpin}
+          disabled={isSpinning}
+          className={`spin-btn ${isWinning ? 'winning' : ''}`}
+        >
+          {isSpinning ? '🎰 Spinning...' : '🎰 SPIN'}
+        </button>
+
+        {isWinning && (
+          <div className="winning-banner">🎉 WINNING COMBINATION! +3 Credits</div>
+        )}
       </div>
 
-      {/* Reels */}
-      <div className="slot-reels">
-        {visibleCats.map((cat) => {
-          const reel = displayedReels[cat.key] || []
-          return (
-            <div className="slot-reel" key={cat.key}>
-              <div className="reel-label">{cat.icon} {cat.label}</div>
-              <div
-                className="reel-viewport"
-                style={{ height: visibleSymbols * SYMBOL_HEIGHT }}
-              >
-                <div
-                  className={`reel-track ${spinningReels[cat.key] ? 'spinning' : ''}`}
-                  style={{
-                    transform: spinningReels[cat.key]
-                      ? undefined
-                      : `translateY(-${finalPositions[cat.key] || 0}px)`,
-                    transition: spinningReels[cat.key] ? 'none' : 'transform 0.5s ease-out',
-                  }}
-                >
-                  {reel.length > 0 ? (
-                    reel.map((result, i) => (
-                      <div className="reel-symbol" key={i} style={{ height: SYMBOL_HEIGHT }}>
-                        <ResultCard result={result} compact />
-                      </div>
-                    ))
-                  ) : (
-                    <div className="reel-symbol empty-symbol" style={{ height: SYMBOL_HEIGHT }}>
-                      <span>No results</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Spin button */}
-      <button
-        onClick={handleSpin}
-        disabled={isSpinning}
-        className={`spin-btn ${isWinning ? 'winning' : ''}`}
-      >
-        {isSpinning ? '🎰 Spinning...' : '🎰 SPIN'}
-      </button>
-
-      {isWinning && (
-        <div className="winning-banner">🎉 WINNING COMBINATION! +3 Credits</div>
-      )}
-    </div>
+      {/* Result detail modal */}
+      {selectedResult && <ResultModal result={selectedResult} onClose={() => setSelectedResult(null)} />}
+    </>
   )
 }
