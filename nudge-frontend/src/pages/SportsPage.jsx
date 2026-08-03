@@ -4,13 +4,16 @@ import '../styles/SportsPage.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-// Default leagues to auto-load standings for (same top 5 as dashboard)
+// Default leagues to auto-load standings for (all 8 major leagues)
 const DEFAULT_LEAGUES = [
   { id: 4328, label: 'EPL' },
   { id: 4331, label: 'Bundesliga' },
   { id: 4332, label: 'Serie A' },
   { id: 4335, label: 'La Liga' },
   { id: 4334, label: 'Ligue 1' },
+  { id: 4387, label: 'NBA' },
+  { id: 4391, label: 'NFL' },
+  { id: 4380, label: 'NHL' },
 ]
 
 const LEAGUE_FILTERS = [
@@ -43,9 +46,8 @@ export default function SportsPage() {
       if (res.ok) {
         const data = await res.json()
         setDashboard(data)
-        // Auto-load standings for the first default league (EPL)
-        // so the Standings reel isn't empty on initial load
-        await fetchStandings(DEFAULT_LEAGUES[0].id)
+        // Auto-load standings for all default leagues in parallel
+        await fetchAllStandings()
       }
     } catch (err) {
       console.error('Failed to fetch sports data:', err)
@@ -66,8 +68,8 @@ export default function SportsPage() {
     }
   }
 
-  // Auto-load all default league standings in parallel when "all" is selected
-  // This populates the Standings reel with data from multiple leagues
+  // Auto-load all default league standings in parallel
+  // Interleaves results so the Standings reel has variety across leagues
   const fetchAllStandings = async () => {
     try {
       const promises = DEFAULT_LEAGUES.map(l => 
@@ -77,7 +79,7 @@ export default function SportsPage() {
           .catch(() => [])
       )
       const results = await Promise.all(promises)
-      // Flatten and take top entries from each league, interleaved
+      // Interleave: take top entries from each league, round-robin style
       const merged = []
       const maxLen = Math.max(...results.map(r => r.length))
       for (let i = 0; i < maxLen; i++) {
@@ -96,7 +98,6 @@ export default function SportsPage() {
   const handleFilterClick = (leagueId) => {
     setActiveFilter(leagueId)
     if (leagueId === 'all') {
-      // Load interleaved standings from all default leagues
       fetchAllStandings()
     } else {
       fetchStandings(leagueId)
