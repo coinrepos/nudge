@@ -1,16 +1,24 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthContext } from './context/AuthContext'
 import useAuth from './hooks/useAuth'
 import Navbar from './components/Navbar'
-import SearchPage from './pages/SearchPage'
-import AuthPage from './pages/AuthPage'
-import ProfilePage from './pages/ProfilePage'
-import LeaderboardPage from './pages/LeaderboardPage'
-import NudgeCashPage from './pages/NudgeCashPage'
-import SportsPage from './pages/SportsPage'
-import TermsPage from './pages/TermsPage'
+import SearchPage from './pages/SearchPage'  // Keep main page eager (critical path)
 import './styles/App.css'
+
+// Lazy-load all secondary pages — keeps initial bundle small
+const AuthPage = lazy(() => import('./pages/AuthPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'))
+const NudgeCashPage = lazy(() => import('./pages/NudgeCashPage'))
+const SportsPage = lazy(() => import('./pages/SportsPage'))
+const TermsPage = lazy(() => import('./pages/TermsPage'))
+
+const PageLoader = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+    <div className="spinner" />
+  </div>
+)
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -44,15 +52,17 @@ function App() {
         <ErrorBoundary>
           <Navbar />
           <main className="main-content">
-            <Routes>
-              <Route path="/" element={<SearchPage />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/profile" element={auth.user ? <ProfilePage /> : <AuthPage />} />
-              <Route path="/leaderboard" element={<LeaderboardPage />} />
-              <Route path="/nudge-cash" element={auth.user ? <NudgeCashPage /> : <AuthPage />} />
-              <Route path="/sports" element={<SportsPage />} />
-              <Route path="/terms" element={<TermsPage />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<SearchPage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/profile" element={auth.user ? <ProfilePage /> : <AuthPage />} />
+                <Route path="/leaderboard" element={<LeaderboardPage />} />
+                <Route path="/nudge-cash" element={auth.user ? <NudgeCashPage /> : <AuthPage />} />
+                <Route path="/sports" element={<SportsPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+              </Routes>
+            </Suspense>
           </main>
           <footer className="app-footer">
             <p>Nudge — Spin to discover. Explore to earn.</p>

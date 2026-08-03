@@ -91,7 +91,7 @@ export default function SearchPage() {
             </div>
 
               <AffiliateDisclosure variant="compact" />
-              {searchResults?.sportsData && <SportsInfoCard sportsData={searchResults.sportsData} />}
+              {results?.sportsData && <SportsInfoCard sportsData={results.sportsData} />}
 
             <ReelSpinner
               reels={reels}

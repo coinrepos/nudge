@@ -2,6 +2,7 @@ import { pool } from '../config/database.js';
 import { fetchSearchResults, calculateRelevanceScore, checkWinningCombination, enhanceQuery } from '../config/searchApis.js';
 import { wrapWithAffiliate, isAffiliateEligible } from '../config/affiliateLinks.js';
 import sportsService from '../config/sportsService.js';
+import { getCached, setCached, makeCacheKey } from '../middleware/searchCache.js';
 import logger from '../utils/logger.js';
 
 const DEFAULT_RESULT_COUNTS = { all: 50, images: 10, videos: 25, news: 15, shopping: 15 };
@@ -21,6 +22,15 @@ const searchController = {
         : query;
 
       const counts = { ...DEFAULT_RESULT_COUNTS, ...(resultCounts || {}) };
+      
+      // Check cache first — skip for authenticated users to keep streaks accurate
+      const cacheKey = makeCacheKey(enhancedQuery, keywords, counts);
+      const cached = getCached(cacheKey);
+      if (cached && !userId) {
+        // Return cached results for anonymous users (streak tracking skipped)
+        return res.json(cached);
+      }
+
       const categorizedResults = await fetchSearchResults(enhancedQuery, { resultCounts: counts });
 
       const totalResults = Object.values(categorizedResults).reduce(
@@ -52,30 +62,38 @@ const searchController = {
       let sportsData = null;
       const sportsMatch = sportsService.detectSportsQuery(query);
       if (sportsMatch) {
-        try {
-          const leagueData = await Promise.all(
-            sportsMatch.suggestedLeagues.map(async (leagueId) => {
-              const [upcoming, recent] = await Promise.all([
-                sportsService.getNextLeagueEvents(leagueId),
-                sportsService.getPastLeagueEvents(leagueId),
-              ]);
-              const details = await sportsService.getLeagueDetails(leagueId);
-              return {
-                league: details?.strLeague || `League ${leagueId}`,
-                leagueId,
-                upcoming: upcoming.slice(0, 3),
-                recent: recent.slice(0, 3),
-              };
-            })
-          );
-          sportsData = {
-            matched: true,
-            type: sportsMatch.type,
-            query: sportsMatch.query,
-            leagues: leagueData,
-          };
-        } catch (err) {
-          logger.warn('Sports data fetch failed for query:', query, err.message);
+        // Cache sports data separately (longer TTL — 5 min)
+        const sportsCacheKey = `sports:${query}`;
+        const cachedSports = getCached(sportsCacheKey);
+        if (cachedSports) {
+          sportsData = cachedSports;
+        } else {
+          try {
+            const leagueData = await Promise.all(
+              sportsMatch.suggestedLeagues.map(async (leagueId) => {
+                const [upcoming, recent] = await Promise.all([
+                  sportsService.getNextLeagueEvents(leagueId),
+                  sportsService.getPastLeagueEvents(leagueId),
+                ]);
+                const details = await sportsService.getLeagueDetails(leagueId);
+                return {
+                  league: details?.strLeague || `League ${leagueId}`,
+                  leagueId,
+                  upcoming: upcoming.slice(0, 3),
+                  recent: recent.slice(0, 3),
+                };
+              })
+            );
+            sportsData = {
+              matched: true,
+              type: sportsMatch.type,
+              query: sportsMatch.query,
+              leagues: leagueData,
+            };
+            setCached(sportsCacheKey, sportsData, 300_000); // 5 min cache
+          } catch (err) {
+            logger.warn('Sports data fetch failed for query:', query, err.message);
+          }
         }
       }
 
@@ -119,7 +137,7 @@ const searchController = {
         }
       }
 
-      res.json({
+      const response = {
         query,
         enhancedQuery: enhancedQuery !== query ? enhancedQuery : undefined,
         reels: categorizedResults,
@@ -128,7 +146,14 @@ const searchController = {
         relevanceRating,
         streakInfo,
         sportsData,
-      });
+      };
+
+      // Cache the response for anonymous users (60s TTL)
+      if (!userId) {
+        setCached(cacheKey, response);
+      }
+
+      res.json(response);
     } catch (error) {
       logger.error('Search error:', error);
       res.status(500).json({ error: 'Search failed' });
@@ -160,7 +185,6 @@ const searchController = {
       );
 
       if (result.rows.length === 0) {
-        // Fallback: return some default trending queries
         return res.json([
           { query: 'latest AI news', search_count: 0 },
           { query: 'best laptops 2026', search_count: 0 },

@@ -7,6 +7,11 @@
     <meta name="theme-color" content="#0a0e27" />
     <link rel="manifest" href="/manifest.json" />
 
+    <!-- Preconnect to critical origins for faster TLS -->
+    <link rel="preconnect" href="https://nudge-production-def0.up.railway.app" />
+    <link rel="preconnect" href="https://s.skimresources.com" />
+    <link rel="dns-prefetch" href="https://serpapi.com" />
+
     <!-- Open Graph -->
     <meta property="og:title" content="Nudge — Spin to Discover" />
     <meta property="og:description" content="A gamified search interface with slot-machine reels. Spin to discover, explore to earn." />
@@ -27,7 +32,7 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
 
-    <!-- Skimlinks — auto-wraps affiliate links across 48,500+ merchants -->
-    <script type="text/javascript" src="https://s.skimresources.com/js/306889X1795159.skimlinks.js"></script>
+    <!-- Skimlinks — deferred so it never blocks first paint -->
+    <script type="text/javascript" src="https://s.skimresources.com/js/306889X1795159.skimlinks.js" async></script>
   </body>
 </html>

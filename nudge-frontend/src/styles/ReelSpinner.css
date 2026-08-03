@@ -98,6 +98,7 @@
   overflow-x: auto;
   padding: 0.5rem 0;
   scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .slot-reel {
@@ -108,6 +109,7 @@
   overflow: hidden;
   border: 2px solid var(--lighter);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  contain: layout style; /* CSS containment for performance */
 }
 
 .reel-label {
@@ -147,7 +149,13 @@
   background: linear-gradient(to top, var(--darker), transparent);
 }
 
-.reel-track { will-change: transform; }
+/* GPU-accelerated reel track */
+.reel-track {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
 
 .reel-track.spinning {
   animation: slotScroll 0.12s linear infinite;
@@ -182,6 +190,26 @@
   cursor: pointer;
   transition: all 0.3s;
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.spin-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s, height 0.4s;
+}
+
+.spin-btn:active::after {
+  width: 300px;
+  height: 300px;
 }
 
 .spin-btn:hover:not(:disabled) {
@@ -189,11 +217,17 @@
   box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
 }
 
-.spin-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.spin-btn:disabled { opacity: 0.6; cursor: not allowed; }
 
 .spin-btn.winning {
   background: linear-gradient(135deg, var(--success), #34d399);
   color: white;
+  animation: winPulse 0.5s ease-in-out 3;
+}
+
+@keyframes winPulse {
+  0%, 100% { box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3); }
+  50% { box-shadow: 0 4px 30px rgba(52, 211, 153, 0.8); }
 }
 
 .winning-banner {
@@ -207,6 +241,17 @@
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-20px); }
+}
+
+/* Reel entry animation — stagger for visual appeal */
+.reel-symbol {
+  animation: fadeInUp 0.3s ease-out;
+  animation-fill-mode: both;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 1024px) {

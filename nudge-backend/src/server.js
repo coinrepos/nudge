@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
@@ -27,9 +28,11 @@ const io = new Server(httpServer, {
   cors: { origin: process.env.FRONTEND_URL || 'http://localhost:5173' },
 });
 
+// Security + performance middleware
 app.use(helmet());
+app.use(compression());
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 io.on('connection', (socket) => {
   logger.info(`User connected: ${socket.id}`);
@@ -40,16 +43,24 @@ io.on('connection', (socket) => {
 
 app.set('io', io);
 
-app.get('/health', (req, res) => {
+// Health check
+app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date() });
 });
 
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/nudge-cash', nudgeCashRoutes);
 app.use('/api/sports', sportsRoutes);
+
+// Cache-control for static-ish responses
+app.use('/api/sports', (req, res, next) => {
+  res.set('Cache-Control', 'public, max-age=300'); // 5 min cache for sports data
+  next();
+});
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
