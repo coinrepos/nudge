@@ -434,3 +434,256 @@
   font-size: 0.6rem;
   color: var(--text-muted);
 }
+
+/* === Clickable symbols === */
+.sports-symbol.clickable {
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.sports-symbol.clickable:hover {
+  background: rgba(245, 158, 11, 0.08);
+  transform: scale(1.02);
+}
+
+.sports-symbol-click-hint {
+  position: absolute;
+  bottom: 0.3rem;
+  right: 0.3rem;
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  opacity: 0.5;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.sports-symbol.clickable:hover .sports-symbol-click-hint {
+  opacity: 1;
+  color: var(--primary);
+}
+
+/* === Match Detail Modal === */
+.sports-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sports-modal {
+  background: var(--dark, #0f172a);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 1rem;
+  max-width: 420px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+  position: relative;
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.sports-modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s;
+}
+
+.sports-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.sports-modal-league {
+  font-size: 0.72rem;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.sports-modal-thumb {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sports-modal-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.sports-modal-team {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+}
+
+.sports-modal-team.won {
+  border-color: var(--primary);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.sports-modal-team-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sports-modal-score {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.sports-modal-vs {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.sports-modal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.sports-modal-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.info-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.info-value {
+  color: var(--text);
+  font-weight: 500;
+  text-align: right;
+}
+
+.info-value.status-live {
+  color: #ef4444;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.info-value.status-finished {
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.info-value.status-upcoming {
+  color: #06b6d4;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.sports-modal-video-btn {
+  display: block;
+  text-align: center;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  padding: 0.65rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  transition: background 0.15s;
+}
+
+.sports-modal-video-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.sports-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sports-modal-action-btn {
+  flex: 1;
+  text-align: center;
+  background: var(--primary);
+  color: var(--dark, #0a0e27);
+  padding: 0.65rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.sports-modal-action-btn:hover {
+  opacity: 0.9;
+}
+
+.sports-modal-team-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.sports-modal-team-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.sports-modal-loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
