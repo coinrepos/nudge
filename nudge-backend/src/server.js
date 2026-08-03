@@ -70,7 +70,7 @@ app.get('/api/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/search/query', searchLimiter, searchRoutes);
+app.use('/api/search', searchLimiter, searchRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/nudge-cash', nudgeCashRoutes);
