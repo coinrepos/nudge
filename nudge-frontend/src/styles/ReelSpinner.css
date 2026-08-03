@@ -759,3 +759,39 @@
   opacity: 1;
   color: var(--primary, #f59e0b);
 }
+
+/* Sports reel viewport — no gradient clipping, show full cards */
+.sports-reel-viewport {
+  overflow: hidden;
+  position: relative;
+}
+
+/* Remove the gradient fade for sports reels so cards aren't cut off */
+.sports-reel-viewport::before,
+.sports-reel-viewport::after {
+  display: none !important;
+}
+
+/* Ensure symbols have enough internal padding and don't clip */
+.reel-symbol.sports-symbol {
+  padding: 0.6rem 0.75rem;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: visible;
+}
+
+.reel-symbol.sports-symbol:last-child {
+  border-bottom: none;
+}
+
+/* Make sure the slot-reels container doesn't cut off cards horizontally */
+.slot-reels {
+  gap: 0.5rem;
+  padding: 0.5rem 0.25rem;
+}
+
+/* Slightly wider reels to fit content without clipping */
+.slot-reel {
+  min-width: 190px;
+  max-width: 220px;
+}

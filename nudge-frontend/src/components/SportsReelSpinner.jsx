@@ -9,7 +9,7 @@ const SPORT_CATEGORIES = [
   { key: 'teams', label: 'Teams', icon: '🛡️' },
 ]
 
-const SYMBOL_HEIGHT = 110
+const SYMBOL_HEIGHT = 120
 
 // === Match Detail Modal ===
 function MatchModal({ event, onClose }) {
@@ -75,7 +75,7 @@ function MatchModal({ event, onClose }) {
 
         <div className="sports-modal-actions">
           <a
-            href={`https://nudge-xi-eight.vercel.app/search?q=${encodeURIComponent(event.homeTeam + ' vs ' + event.awayTeam)}`}
+            href={`/search?q=${encodeURIComponent(event.homeTeam + ' vs ' + event.awayTeam)}`}
             className="sports-modal-action-btn"
           >
             🔍 Search this match
@@ -146,7 +146,7 @@ function TeamModal({ team, onClose }) {
             </div>
             <div className="sports-modal-actions">
               <a
-                href={`https://nudge-xi-eight.vercel.app/search?q=${encodeURIComponent(team.name)}`}
+                href={`/search?q=${encodeURIComponent(team.name)}`}
                 className="sports-modal-action-btn"
               >
                 🔍 Search {team.name}
@@ -159,7 +159,7 @@ function TeamModal({ team, onClose }) {
             <div className="sports-modal-team-desc">{team.league}</div>
             <div className="sports-modal-actions">
               <a
-                href={`https://nudge-xi-eight.vercel.app/search?q=${encodeURIComponent(team.name)}`}
+                href={`/search?q=${encodeURIComponent(team.name)}`}
                 className="sports-modal-action-btn"
               >
                 🔍 Search {team.name}
@@ -174,8 +174,8 @@ function TeamModal({ team, onClose }) {
 
 // === Reel Symbols (clickable) ===
 function EventSymbol({ event, onClick }) {
-  const homeWin = event.hasResult && event.homeScore > event.awayScore
-  const awayWin = event.hasResult && event.awayScore > event.homeScore
+  const homeWin = event.hasResult && Number(event.homeScore) > Number(event.awayScore)
+  const awayWin = event.hasResult && Number(event.awayScore) > Number(event.homeScore)
   return (
     <div
       className="reel-symbol sports-symbol clickable"
@@ -216,9 +216,10 @@ function TeamSymbol({ team, onClick }) {
   )
 }
 
-export default function SportsReelSpinner({ dashboard, standings, teams }) {
+export default function SportsReelSpinner({ dashboard }) {
   const [isSpinning, setIsSpinning] = useState(false)
-  const [activeCategory, setActiveCategory] = useState('today')
+  // DEFAULT TO 'all' — always show all 5 reels
+  const [activeCategory, setActiveCategory] = useState('all')
   const [spinningReels, setSpinningReels] = useState({})
   const [finalPositions, setFinalPositions] = useState({})
   const [selectedEvent, setSelectedEvent] = useState(null)
@@ -238,7 +239,7 @@ export default function SportsReelSpinner({ dashboard, standings, teams }) {
     const results = leagues.flatMap(l => l.recent || [])
     // Live = events with status 'live' from any source
     const live = [...todayEvents, ...upcoming, ...results].filter(e => e.status === 'live')
-    const allTeams = teams || leagues.flatMap(l =>
+    const allTeams = leagues.flatMap(l =>
       (l.upcoming || []).concat(l.recent || []).reduce((acc, e) => {
         if (e.homeTeam && !acc.find(t => t.name === e.homeTeam)) acc.push({ name: e.homeTeam, league: e.league, badge: e.homeBadge, teamId: e.homeTeamId })
         if (e.awayTeam && !acc.find(t => t.name === e.awayTeam)) acc.push({ name: e.awayTeam, league: e.league, badge: e.awayBadge, teamId: e.awayTeamId })
@@ -253,12 +254,13 @@ export default function SportsReelSpinner({ dashboard, standings, teams }) {
       live,
       teams: allTeams,
     }
-  }, [dashboard, standings, teams])
+  }, [dashboard])
 
   const visibleCats = activeCategory === 'all'
     ? SPORT_CATEGORIES
     : SPORT_CATEGORIES.filter(c => c.key === activeCategory)
 
+  // Show 3 symbols per reel in 'all' mode, 5 in single-category mode
   const visibleSymbols = activeCategory === 'all' ? 3 : 5
 
   const handleSpin = () => {
@@ -318,7 +320,7 @@ export default function SportsReelSpinner({ dashboard, standings, teams }) {
   return (
     <>
       <div className="slot-machine">
-        {/* Category buttons */}
+        {/* Category buttons — 'All Reels' is always first and default */}
         <div className="reel-controls">
           <div className="category-buttons">
             <button
@@ -341,7 +343,7 @@ export default function SportsReelSpinner({ dashboard, standings, teams }) {
           </div>
         </div>
 
-        {/* Reels */}
+        {/* Reels — always show all 5 when activeCategory === 'all' */}
         <div className="slot-reels">
           {visibleCats.map((cat) => {
             const reel = reels[cat.key] || []
@@ -349,7 +351,7 @@ export default function SportsReelSpinner({ dashboard, standings, teams }) {
               <div className="slot-reel" key={cat.key}>
                 <div className="reel-label">{cat.icon} {cat.label}</div>
                 <div
-                  className="reel-viewport"
+                  className="reel-viewport sports-reel-viewport"
                   style={{ height: visibleSymbols * SYMBOL_HEIGHT }}
                 >
                   <div
