@@ -211,7 +211,7 @@ const sportsService = {
       const todayEvents = await this.getTodayEvents();
 
       // Fetch upcoming + past for top leagues in parallel
-      const leagueDataPromises = POPULAR_LEAGUES.slice(0, 5).map(async (league) => {
+      const leagueDataPromises = POPULAR_LEAGUES.map(async (league) => {
         const [upcoming, past] = await Promise.all([
           this.getNextLeagueEvents(league.id),
           this.getPastLeagueEvents(league.id),

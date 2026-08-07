@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthContext } from './context/AuthContext'
 import useAuth from './hooks/useAuth'
 import Navbar from './components/Navbar'
@@ -19,6 +19,11 @@ const PageLoader = () => (
     <div className="spinner" />
   </div>
 )
+
+// Protected route wrapper — redirects to auth if not logged in
+const ProtectedRoute = ({ user, children }) => {
+  return user ? children : <Navigate to="/auth" replace />
+}
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -56,10 +61,10 @@ function App() {
               <Routes>
                 <Route path="/" element={<SearchPage />} />
                 <Route path="/auth" element={<AuthPage />} />
-                <Route path="/profile" element={auth.user ? <ProfilePage /> : <AuthPage />} />
-                <Route path="/leaderboard" element={<LeaderboardPage />} />
-                <Route path="/nudge-cash" element={auth.user ? <NudgeCashPage /> : <AuthPage />} />
-                <Route path="/sports" element={<SportsPage />} />
+                <Route path="/profile" element={<ProtectedRoute user={auth.user}><ProfilePage /></ProtectedRoute>} />
+                <Route path="/leaderboard" element={<ProtectedRoute user={auth.user}><LeaderboardPage /></ProtectedRoute>} />
+                <Route path="/nudge-cash" element={<ProtectedRoute user={auth.user}><NudgeCashPage /></ProtectedRoute>} />
+                <Route path="/sports" element={<ProtectedRoute user={auth.user}><SportsPage /></ProtectedRoute>} />
                 <Route path="/terms" element={<TermsPage />} />
               </Routes>
             </Suspense>

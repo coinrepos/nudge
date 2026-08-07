@@ -27,11 +27,11 @@ export default function Navbar() {
 
         <div className="navbar-menu">
           <Link to="/" className="nav-link">Search</Link>
-          <Link to="/sports" className="nav-link">Sports</Link>
 
-          {/* Leaderboard only visible when logged in */}
+          {/* Sports Hub only visible when logged in — keeps search page clean */}
           {user && (
             <>
+              <Link to="/sports" className="nav-link">Sports</Link>
               <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
               <Link to="/nudge-cash" className="nav-link">Nudge Cash</Link>
             </>
