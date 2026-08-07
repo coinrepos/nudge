@@ -1,5 +1,5 @@
 import { pool } from '../config/database.js';
-import { fetchSearchResults, calculateRelevanceScore, checkWinningCombination, enhanceQuery, searchGoogleNewsRSS } from '../config/searchApis.js';
+import { fetchSearchResults, calculateRelevanceScore, checkWinningCombination, enhanceQuery, searchGoogleNewsRSS, searchSerpAPINews } from '../config/searchApis.js';
 import { wrapWithAffiliate, isAffiliateEligible } from '../config/affiliateLinks.js';
 import sportsService from '../config/sportsService.js';
 import { getCached, setCached, makeCacheKey } from '../middleware/searchCache.js';
@@ -213,19 +213,32 @@ const searchController = {
       const cachedNews = getCached('trending_news');
       if (cachedNews) return res.json(cachedNews);
 
-      // Fetch trending headlines from multiple categories (all free, no API key)
-      const [worldNews, techNews, businessNews] = await Promise.all([
-        searchGoogleNewsRSS('world news today', 5),
-        searchGoogleNewsRSS('technology news', 4),
-        searchGoogleNewsRSS('business and finance news', 3),
-      ]);
-      
-      // Combine and deduplicate across categories
-      const combined = [...worldNews, ...techNews, ...businessNews];
+      // Try SerpAPI Google News first (reliable on Railway), then free RSS fallback
+      let combined = [];
+      try {
+        const [serpWorld, serpTech] = await Promise.all([
+          searchSerpAPINews('world news today top headlines', 8),
+          searchSerpAPINews('technology business news today', 5),
+        ]);
+        combined = [...serpWorld, ...serpTech];
+      } catch (e) {
+        logger.warn('SerpAPI news failed for trending, trying RSS...');
+      }
+
+      // If SerpAPI returned too few, supplement with free Google News RSS
+      if (combined.length < 5) {
+        const [rssWorld, rssTech] = await Promise.all([
+          searchGoogleNewsRSS('world news today', 6),
+          searchGoogleNewsRSS('technology news', 4),
+        ]);
+        const existingTitles = new Set(combined.map(c => c.title));
+        combined = [...combined, ...rssWorld.filter(r => !existingTitles.has(r.title)), ...rssTech.filter(r => !existingTitles.has(r.title))];
+      }
+
+      // Deduplicate and filter out local TV news broadcasts
       const seen = new Set();
       const deduped = combined.filter(item => {
         if (seen.has(item.title) || !item.title || item.title.length < 15) return false;
-        // Filter out local TV news broadcasts
         if (/\b\d+\s*(p|a)\.?m\.?\b/i.test(item.title) && /news at|top stories|evening news|morning news/i.test(item.title)) return false;
         seen.add(item.title);
         return true;
