@@ -61,12 +61,27 @@ export default function ResultCard({ result, compact, onOpenDetail }) {
   }
 
   if (compact) {
+    const isNews = result.type === 'news'
+    const sourceName = isNews ? (result.source || result.sourceDomain || 'News') : (result.sourceDomain || result.source || 'Unknown')
+    const sourceIcon = isNews && result.thumbnail ? result.thumbnail : null
+    const authors = isNews && result.authors && result.authors.length > 0 ? result.authors.join(', ') : null
+
     return (
       <div className="result-card compact clickable" onClick={handleCardClick} title="Click for details">
+        {sourceIcon && (
+          <div className="news-source-icon">
+            <img src={sourceIcon} alt="" onError={(e) => { e.target.style.display = 'none' }} />
+          </div>
+        )}
+        {isNews && <span className="news-type-badge">📰 News</span>}
         <h3 className="result-title">{result.title || 'Untitled'}</h3>
+        {isNews && authors && <span className="news-author">by {authors}</span>}
         <div className="compact-footer">
-          <span className="result-source">{result.sourceDomain || result.source || 'Unknown'}</span>
+          <span className="result-source">{sourceName}</span>
           <div className="compact-actions">
+            {result.date && (
+              <span className="compact-date">{new Date(result.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+            )}
             <span className="result-relevance">{((result.relevanceScore || 0) * 100).toFixed(0)}%</span>
             {result.isAffiliateEligible && (
               <span className="cashback-badge" title={`${result.cashbackRate}% cashback available`}>
@@ -86,8 +101,11 @@ export default function ResultCard({ result, compact, onOpenDetail }) {
   return (
     <div className="result-card" onClick={handleCardClick}>
       <div className="result-header">
+        {result.type === 'news' && result.thumbnail && (
+          <img src={result.thumbnail} alt="" className="news-thumbnail" onError={(e) => { e.target.style.display = 'none' }} />
+        )}
         <h3 className="result-title">{result.title || 'Untitled'}</h3>
-        <span className="result-source">{result.source || 'Unknown'}</span>
+        <span className="result-source">{result.source || result.sourceDomain || 'Unknown'}</span>
       </div>
 
       <p className="result-snippet">

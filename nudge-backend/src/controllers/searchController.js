@@ -1,5 +1,5 @@
 import { pool } from '../config/database.js';
-import { fetchSearchResults, calculateRelevanceScore, checkWinningCombination, enhanceQuery } from '../config/searchApis.js';
+import { fetchSearchResults, calculateRelevanceScore, checkWinningCombination, enhanceQuery, searchGoogleNewsRSS } from '../config/searchApis.js';
 import { wrapWithAffiliate, isAffiliateEligible } from '../config/affiliateLinks.js';
 import sportsService from '../config/sportsService.js';
 import { getCached, setCached, makeCacheKey } from '../middleware/searchCache.js';
@@ -206,6 +206,31 @@ const searchController = {
       res.status(500).json({ error: 'Failed to fetch trending searches' });
     }
   },
+
+  async getTrendingNews(req, res) {
+    try {
+      // Check cache first (10 min TTL for news)
+      const cachedNews = getCached('trending_news');
+      if (cachedNews) return res.json(cachedNews);
+
+      // Fetch top headlines from free Google News RSS
+      const headlines = await searchGoogleNewsRSS('top stories OR breaking news OR world news', 10);
+      
+      // Also grab tech news for variety
+      const techNews = await searchGoogleNewsRSS('technology news today', 5);
+      
+      // Combine and deduplicate
+      const seen = new Set(headlines.map(h => h.title));
+      const combined = [...headlines, ...techNews.filter(t => !seen.has(t.title))].slice(0, 12);
+      
+      setCached('trending_news', combined, 600_000); // 10 min cache
+      res.json(combined);
+    } catch (error) {
+      logger.error('Trending news fetch error:', error);
+      res.status(500).json({ error: 'Failed to fetch trending news' });
+    }
+  }
+
 };
 
 export default searchController;

@@ -8,6 +8,7 @@ import useCredits from '../hooks/useCredits'
 import '../styles/SearchPage.css'
 import AffiliateDisclosure from '../components/AffiliateDisclosure'
 import SportsInfoCard from '../components/SportsInfoCard'
+import TrendingNews from '../components/TrendingNews'
 
 export default function SearchPage() {
   const { user, accessToken } = useContext(AuthContext)
@@ -124,6 +125,7 @@ export default function SearchPage() {
                 </div>
               </div>
             )}
+            <TrendingNews onSearch={handleSearch} />
           </div>
         )}
 
