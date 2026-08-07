@@ -216,23 +216,24 @@ const searchController = {
       // Try SerpAPI Google News first (reliable on Railway), then free RSS fallback
       let combined = [];
       try {
-        const [serpWorld, serpTech] = await Promise.all([
-          searchSerpAPINews('world news today top headlines', 8),
-          searchSerpAPINews('technology business news today', 5),
+        const [serpBreaking, serpTech, serpWorld] = await Promise.all([
+          searchSerpAPINews('breaking news', 5),
+          searchSerpAPINews('AI technology', 4),
+          searchSerpAPINews('world headlines', 5),
         ]);
-        combined = [...serpWorld, ...serpTech];
+        combined = [...serpBreaking, ...serpTech, ...serpWorld];
       } catch (e) {
         logger.warn('SerpAPI news failed for trending, trying RSS...');
       }
 
       // If SerpAPI returned too few, supplement with free Google News RSS
       if (combined.length < 5) {
-        const [rssWorld, rssTech] = await Promise.all([
-          searchGoogleNewsRSS('world news today', 6),
-          searchGoogleNewsRSS('technology news', 4),
+        const [rssBreaking, rssTech] = await Promise.all([
+          searchGoogleNewsRSS('breaking news', 6),
+          searchGoogleNewsRSS('AI technology', 4),
         ]);
         const existingTitles = new Set(combined.map(c => c.title));
-        combined = [...combined, ...rssWorld.filter(r => !existingTitles.has(r.title)), ...rssTech.filter(r => !existingTitles.has(r.title))];
+        combined = [...combined, ...rssBreaking.filter(r => !existingTitles.has(r.title)), ...rssTech.filter(r => !existingTitles.has(r.title))];
       }
 
       // Deduplicate and filter out local TV news broadcasts
