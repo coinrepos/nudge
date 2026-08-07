@@ -220,6 +220,78 @@ export async function searchSearx(query, maxResults = 50) {
   return [];
 }
 
+
+// === SerpAPI: Dedicated Google News search (always returns news for any query) ===
+export async function searchSerpAPINews(query, num = 15) {
+  try {
+    const response = await axios.get('https://serpapi.com/search', {
+      params: { q: query, api_key: SERPAPI_KEY, engine: 'google_news', num, gl: 'us', hl: 'en' },
+      timeout: 10000,
+    });
+    const stories = response.data.news_results || [];
+    return stories.slice(0, num).map((result, i) => ({
+      title: result.title || 'Untitled',
+      url: result.link || '',
+      snippet: result.snippet || '',
+      source: result.source || (result.source_id || 'Google News'),
+      sourceDomain: extractDomain(result.link || ''),
+      relevanceScore: (10 - i) / 10,
+      date: result.date || result.publish_date || null,
+      type: 'news',
+      thumbnail: result.thumbnail || '',
+    }));
+  } catch (error) {
+    console.error('SerpAPI News error:', error.message);
+    return [];
+  }
+}
+
+// === Free Google News RSS fallback (no API key needed) ===
+export async function searchGoogleNewsRSS(query, maxResults = 15) {
+  try {
+    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+    const response = await axios.get(rssUrl, {
+      timeout: 8000,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+    });
+    const $ = cheerio.load(response.data, { xmlMode: true });
+    const results = [];
+    $('item').each((i, elem) => {
+      if (i >= maxResults) return false;
+      const title = $(elem).find('title').text().trim();
+      const link = $(elem).find('link').text().trim();
+      const pubDate = $(elem).find('pubDate').text().trim();
+      const source = $(elem).find('source').text().trim();
+      const description = $(elem).find('description').text().trim();
+      // Extract actual URL from Google News redirect
+      let cleanUrl = link;
+      if (link.includes('news.google.com/rss/articles/')) {
+        // Keep Google News link — it redirects to the actual article
+        cleanUrl = link;
+      }
+      // Parse snippet from description (strip HTML)
+      const snippetText = description.replace(/<[^>]+>/g, '').trim().slice(0, 200);
+      if (title) {
+        results.push({
+          title: title.split(' - ').length > 1 && source ? title.split(' - ').slice(0, -1).join(' - ') : title,
+          url: cleanUrl,
+          snippet: snippetText || '',
+          source: source || 'Google News',
+          sourceDomain: source ? source.toLowerCase().replace(/\s+/g, '') : extractDomain(cleanUrl),
+          relevanceScore: (maxResults - i) / maxResults,
+          date: pubDate || null,
+          type: 'news',
+          thumbnail: '',
+        });
+      }
+    });
+    return results;
+  } catch (error) {
+    console.error('Google News RSS error:', error.message);
+    return [];
+  }
+}
+
 // === Demo Mode ===
 function getDemoResults(query) {
   const cats = {
@@ -261,22 +333,30 @@ export async function fetchSearchResults(query, options = {}) {
   if (SERPAPI_KEY) {
     // Run ALL SerpAPI calls in parallel — reduces latency from ~24s to ~8s
     console.log('Searching with SerpAPI (parallel)...');
-    const [serpRes, imagesRes, videosRes] = await Promise.allSettled([
+    const [serpRes, imagesRes, videosRes, newsRes] = await Promise.allSettled([
       searchSerpAPI(query, resultCounts.all),
       searchSerpAPIImages(query, resultCounts.images),
       searchSerpAPIVideos(query, resultCounts.videos),
+      searchSerpAPINews(query, resultCounts.news),
     ]);
 
     const serpResults = serpRes.status === 'fulfilled' ? serpRes.value : { organic: [], news: [], shopping: [] };
     categorized.all = serpResults.organic.slice(0, resultCounts.all);
-    categorized.news = serpResults.news.slice(0, resultCounts.news);
+    // Use dedicated Google News results first, then inline news_results, then domain-based fallback
+    const dedicatedNews = newsRes.status === 'fulfilled' ? newsRes.value : [];
+    categorized.news = [...dedicatedNews, ...serpResults.news].slice(0, resultCounts.news);
     categorized.shopping = serpResults.shopping.slice(0, resultCounts.shopping);
     categorized.images = imagesRes.status === 'fulfilled' ? imagesRes.value : [];
     categorized.videos = videosRes.status === 'fulfilled' ? videosRes.value : [];
 
     // Domain-based fallback ONLY for categories with very few results (don't duplicate)
-    if (categorized.news.length < 3) {
+    if (categorized.news.length < 5) {
+      // Try free Google News RSS as a fallback
+      const rssNews = await searchGoogleNewsRSS(query, resultCounts.news);
       const existingUrls = new Set(categorized.news.map(r => r.url));
+      const freshRss = rssNews.filter(r => !existingUrls.has(r.url));
+      categorized.news = [...categorized.news, ...freshRss].slice(0, resultCounts.news);
+      existingUrls.clear();
       const extra = categorized.all.filter(r => categorizeByDomain(r) === 'news' && !existingUrls.has(r.url));
       categorized.news = [...categorized.news, ...extra].slice(0, resultCounts.news);
     }
@@ -304,7 +384,9 @@ export async function fetchSearchResults(query, options = {}) {
     categorized.all = organicResults.slice(0, resultCounts.all);
     // For free path, categorize by domain (no duplication)
     categorized.videos = organicResults.filter(r => categorizeByDomain(r) === 'videos').slice(0, resultCounts.videos);
-    categorized.news = organicResults.filter(r => categorizeByDomain(r) === 'news').slice(0, resultCounts.news);
+    // For free path: domain-based categorization + free Google News RSS
+    const freeRssNews = await searchGoogleNewsRSS(query, resultCounts.news);
+    categorized.news = [...freeRssNews, ...organicResults.filter(r => categorizeByDomain(r) === 'news')].slice(0, resultCounts.news);
     categorized.shopping = organicResults.filter(r => categorizeByDomain(r) === 'shopping').slice(0, resultCounts.shopping);
   }
 
