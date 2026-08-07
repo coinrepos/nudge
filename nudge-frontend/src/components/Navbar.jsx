@@ -32,6 +32,7 @@ export default function Navbar() {
           {user && (
             <>
               <Link to="/sports" className="nav-link">Sports</Link>
+              <Link to="/shopping" className="nav-link">Shopping</Link>
               <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
               <Link to="/nudge-cash" className="nav-link">Nudge Cash</Link>
             </>

@@ -13,6 +13,7 @@ const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'))
 const NudgeCashPage = lazy(() => import('./pages/NudgeCashPage'))
 const SportsPage = lazy(() => import('./pages/SportsPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
+const ShoppingPage = lazy(() => import('./pages/ShoppingPage'))
 
 const PageLoader = () => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
@@ -65,6 +66,7 @@ function App() {
                 <Route path="/leaderboard" element={<ProtectedRoute user={auth.user}><LeaderboardPage /></ProtectedRoute>} />
                 <Route path="/nudge-cash" element={<ProtectedRoute user={auth.user}><NudgeCashPage /></ProtectedRoute>} />
                 <Route path="/sports" element={<ProtectedRoute user={auth.user}><SportsPage /></ProtectedRoute>} />
+                <Route path="/shopping" element={<ProtectedRoute user={auth.user}><ShoppingPage /></ProtectedRoute>} />
                 <Route path="/terms" element={<TermsPage />} />
               </Routes>
             </Suspense>
