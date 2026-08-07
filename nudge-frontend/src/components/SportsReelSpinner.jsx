@@ -9,7 +9,7 @@ const SPORT_CATEGORIES = [
   { key: 'teams', label: 'Teams', icon: '🛡️' },
 ]
 
-const SYMBOL_HEIGHT = 120
+const SYMBOL_HEIGHT = 100
 
 // === Match Detail Modal ===
 function MatchModal({ event, onClose }) {
@@ -261,7 +261,7 @@ export default function SportsReelSpinner({ dashboard }) {
     : SPORT_CATEGORIES.filter(c => c.key === activeCategory)
 
   // Show 3 symbols per reel in 'all' mode, 5 in single-category mode
-  const visibleSymbols = activeCategory === 'all' ? 3 : 5
+  const visibleSymbols = activeCategory === 'all' ? 5 : 7
 
   const handleSpin = () => {
     if (isSpinning) return
@@ -351,7 +351,7 @@ export default function SportsReelSpinner({ dashboard }) {
               <div className="slot-reel" key={cat.key}>
                 <div className="reel-label">{cat.icon} {cat.label}</div>
                 <div
-                  className="reel-viewport sports-reel-viewport"
+                  className={`reel-viewport sports-reel-viewport ${spinningReels[cat.key] ? "spinning-viewport" : ""}`}
                   style={{ height: visibleSymbols * SYMBOL_HEIGHT }}
                 >
                   <div
