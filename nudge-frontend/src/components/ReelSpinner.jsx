@@ -11,6 +11,13 @@ const CATEGORIES = [
 ]
 
 const SYMBOL_HEIGHT = 110
+const THUMB_SYMBOL_HEIGHT = 190  // Taller for cards with thumbnails (image/video/shopping/news)
+
+function getReelHeight(catKey, reel) {
+  if (!reel || reel.length === 0) return SYMBOL_HEIGHT
+  const hasThumbs = reel.some(r => r.thumbnail)
+  return hasThumbs ? THUMB_SYMBOL_HEIGHT : SYMBOL_HEIGHT
+}
 
 // === Search Result Detail Modal ===
 function ResultModal({ result, onClose }) {
@@ -34,6 +41,10 @@ function ResultModal({ result, onClose }) {
         <button className="sports-modal-close" onClick={onClose}>✕</button>
 
         <div className="sports-modal-league">{result.sourceDomain || result.source || 'Search Result'}</div>
+
+        {result.thumbnail && (
+          <img src={result.thumbnail} alt="" className="sports-modal-thumb" onError={(e) => { e.target.style.display = 'none' }} />
+        )}
 
         <h2 className="result-modal-title">{result.title || 'Untitled'}</h2>
 
@@ -130,10 +141,11 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
       const stopDelay = 1200 + index * 250
 
       const timer = setTimeout(() => {
+        const reelHeight = getReelHeight(cat.key, reel)
         const finalIndex = reel.length <= visibleSymbols
           ? 0
           : Math.floor(Math.random() * (reel.length - visibleSymbols + 1))
-        setFinalPositions(prev => ({ ...prev, [cat.key]: finalIndex * SYMBOL_HEIGHT }))
+        setFinalPositions(prev => ({ ...prev, [cat.key]: finalIndex * reelHeight }))
         setSpinningReels(prev => ({ ...prev, [cat.key]: false }))
       }, stopDelay)
       timersRef.current.push(timer)
@@ -195,10 +207,10 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
                 <div className="reel-label">{cat.icon} {cat.label}</div>
                 <div
                   className="reel-viewport"
-                  style={{ height: visibleSymbols * SYMBOL_HEIGHT }}
+                  style={{ height: visibleSymbols * getReelHeight(cat.key, reel) }}
                 >
                   <div
-                    className={`reel-track ${spinningReels[cat.key] ? 'spinning' : ''}`}
+                    className={`reel-track ${spinningReels[cat.key] ? 'spinning' : ''} ${reel.some(r => r.thumbnail) ? 'thumb-reel' : ''}`}
                     style={{
                       transform: spinningReels[cat.key]
                         ? undefined
@@ -208,7 +220,7 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
                   >
                     {reel.length > 0 ? (
                       reel.map((result, i) => (
-                        <div className="reel-symbol" key={i} style={{ height: SYMBOL_HEIGHT }}>
+                        <div className="reel-symbol" key={i} style={{ height: reel.some(r => r.thumbnail) ? THUMB_SYMBOL_HEIGHT : SYMBOL_HEIGHT }}>
                           <ResultCard
                             result={result}
                             compact
@@ -217,7 +229,7 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
                         </div>
                       ))
                     ) : (
-                      <div className="reel-symbol empty-symbol" style={{ height: SYMBOL_HEIGHT }}>
+                      <div className="reel-symbol empty-symbol" style={{ height: reel.some(r => r.thumbnail) ? THUMB_SYMBOL_HEIGHT : SYMBOL_HEIGHT }}>
                         <span>No results</span>
                       </div>
                     )}

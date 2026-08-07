@@ -214,3 +214,121 @@
   border-radius: 8px;
   margin-bottom: 8px;
 }
+
+/* === Large Thumbnails for Reel Cards === */
+
+/* Compact mode: large thumbnail at the top of the card */
+.compact-thumb-wrapper {
+  width: 100%;
+  height: 70px;
+  overflow: hidden;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.compact-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.result-card.compact:hover .compact-thumb {
+  transform: scale(1.05);
+}
+
+/* Video play indicator overlay */
+.compact-video-duration {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+/* Image type badge */
+.compact-type-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 0.6rem;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+/* Shopping price tag overlay */
+.compact-price-tag {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  background: rgba(16, 185, 129, 0.9);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+/* Full card mode: large thumbnail */
+.result-thumbnail-large {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+/* News thumbnail fix for full cards */
+.news-thumbnail {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+/* Video badge for non-thumbnail compact cards */
+.news-type-badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  letter-spacing: 0.3px;
+}
+
+.news-author {
+  font-size: 0.68rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-bottom: 3px;
+}
+
+.compact-date {
+  font-size: 0.68rem;
+  color: #6b7280;
+}
+
+/* News source icon (small favicon-style) */
+.news-source-icon {
+  width: 100%;
+  height: 24px;
+  margin-bottom: 4px;
+}
+
+.news-source-icon img {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: cover;
+}

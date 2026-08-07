@@ -161,9 +161,18 @@
   animation: slotScroll 0.12s linear infinite;
 }
 
+.reel-track.spinning.thumb-reel {
+  animation: slotScrollThumb 0.15s linear infinite;
+}
+
 @keyframes slotScroll {
   0% { transform: translateY(0); }
   100% { transform: translateY(-330px); }
+}
+
+@keyframes slotScrollThumb {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-570px); }
 }
 
 .reel-symbol {
@@ -877,3 +886,26 @@
 .team-symbol-league {
   font-size: 0.55rem !important;
 }
+
+
+/* === Thumbnail card sizing in reels === */
+.reel-symbol:has(.compact-thumb-wrapper) {
+  padding: 0.2rem;
+}
+
+.compact-thumb-wrapper {
+  background: #0d1525;
+}
+
+/* Ensure compact cards with thumbs fill the symbol */
+.result-card.compact:has(.compact-thumb-wrapper) {
+  justify-content: flex-start;
+  padding: 0.3rem;
+}
+
+/* Gradients removed from reel viewport to prevent clipping */
+.reel-viewport::before,
+.reel-viewport::after {
+  height: 15px;
+}
+

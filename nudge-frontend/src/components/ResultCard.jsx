@@ -6,6 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export default function ResultCard({ result, compact, onOpenDetail }) {
   const [copied, setCopied] = useState(false)
+  const [imgError, setImgError] = useState(false)
   const { accessToken } = useContext(AuthContext)
 
   const trackAffiliateClick = async () => {
@@ -13,7 +14,6 @@ export default function ResultCard({ result, compact, onOpenDetail }) {
 
     try {
       await fetch(`${API_URL}/nudge-cash/track-click`, {
-        method: 'Content-Type',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -39,7 +39,6 @@ export default function ResultCard({ result, compact, onOpenDetail }) {
     }
   }
 
-  // In compact mode (reels), clicking opens the detail modal instead of visiting
   const handleCardClick = () => {
     if (compact && onOpenDetail) {
       onOpenDetail(result)
@@ -60,27 +59,52 @@ export default function ResultCard({ result, compact, onOpenDetail }) {
     }
   }
 
+  // Determine if this card should show a large thumbnail
+  const hasThumbnail = result.thumbnail && !imgError
+  const isImage = result.type === 'image'
+  const isVideo = result.type === 'video'
+  const isNews = result.type === 'news'
+  const isShopping = result.type === 'shopping'
+  const showLargeThumb = hasThumbnail && (isImage || isVideo || isShopping || isNews)
+
   if (compact) {
-    const isNews = result.type === 'news'
-    const sourceName = isNews ? (result.source || result.sourceDomain || 'News') : (result.sourceDomain || result.source || 'Unknown')
-    const sourceIcon = isNews && result.thumbnail ? result.thumbnail : null
+    const sourceName = isNews
+      ? (result.source || result.sourceDomain || 'News')
+      : (result.sourceDomain || result.source || 'Unknown')
     const authors = isNews && result.authors && result.authors.length > 0 ? result.authors.join(', ') : null
 
     return (
       <div className="result-card compact clickable" onClick={handleCardClick} title="Click for details">
-        {sourceIcon && (
-          <div className="news-source-icon">
-            <img src={sourceIcon} alt="" onError={(e) => { e.target.style.display = 'none' }} />
+        {/* Large thumbnail for image/video/shopping/news results */}
+        {showLargeThumb && (
+          <div className="compact-thumb-wrapper">
+            <img
+              src={result.thumbnail}
+              alt=""
+              className="compact-thumb"
+              onError={() => setImgError(true)}
+              loading="lazy"
+            />
+            {isVideo && <span className="compact-video-duration">▶</span>}
+            {isImage && <span className="compact-type-badge">🖼️</span>}
+            {isShopping && result.price && <span className="compact-price-tag">{result.price}</span>}
           </div>
         )}
-        {isNews && <span className="news-type-badge">📰 News</span>}
+
+        {isNews && !showLargeThumb && <span className="news-type-badge">📰 News</span>}
+        {isVideo && !showLargeThumb && <span className="news-type-badge">🎬 Video</span>}
+
         <h3 className="result-title">{result.title || 'Untitled'}</h3>
+
         {isNews && authors && <span className="news-author">by {authors}</span>}
+
         <div className="compact-footer">
           <span className="result-source">{sourceName}</span>
           <div className="compact-actions">
             {result.date && (
-              <span className="compact-date">{new Date(result.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+              <span className="compact-date">
+                {new Date(result.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              </span>
             )}
             <span className="result-relevance">{((result.relevanceScore || 0) * 100).toFixed(0)}%</span>
             {result.isAffiliateEligible && (
@@ -100,10 +124,18 @@ export default function ResultCard({ result, compact, onOpenDetail }) {
 
   return (
     <div className="result-card" onClick={handleCardClick}>
+      {/* Large thumbnail at the top for image/video/shopping/news */}
+      {showLargeThumb && (
+        <img
+          src={result.thumbnail}
+          alt=""
+          className="result-thumbnail-large"
+          onError={() => setImgError(true)}
+          loading="lazy"
+        />
+      )}
+
       <div className="result-header">
-        {result.type === 'news' && result.thumbnail && (
-          <img src={result.thumbnail} alt="" className="news-thumbnail" onError={(e) => { e.target.style.display = 'none' }} />
-        )}
         <h3 className="result-title">{result.title || 'Untitled'}</h3>
         <span className="result-source">{result.source || result.sourceDomain || 'Unknown'}</span>
       </div>
@@ -118,6 +150,9 @@ export default function ResultCard({ result, compact, onOpenDetail }) {
         </span>
         {result.date && (
           <span className="result-date">{new Date(result.date).toLocaleDateString()}</span>
+        )}
+        {isShopping && result.price && (
+          <span className="cashback-badge">{result.price}</span>
         )}
         {result.isAffiliateEligible && (
           <span className="cashback-badge" title="Earn Nudge Cash on this purchase">
