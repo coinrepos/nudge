@@ -213,18 +213,26 @@ const searchController = {
       const cachedNews = getCached('trending_news');
       if (cachedNews) return res.json(cachedNews);
 
-      // Fetch top headlines from free Google News RSS
-      const headlines = await searchGoogleNewsRSS('top stories OR breaking news OR world news', 10);
+      // Fetch trending headlines from multiple categories (all free, no API key)
+      const [worldNews, techNews, businessNews] = await Promise.all([
+        searchGoogleNewsRSS('world news today', 5),
+        searchGoogleNewsRSS('technology news', 4),
+        searchGoogleNewsRSS('business and finance news', 3),
+      ]);
       
-      // Also grab tech news for variety
-      const techNews = await searchGoogleNewsRSS('technology news today', 5);
+      // Combine and deduplicate across categories
+      const combined = [...worldNews, ...techNews, ...businessNews];
+      const seen = new Set();
+      const deduped = combined.filter(item => {
+        if (seen.has(item.title) || !item.title || item.title.length < 15) return false;
+        // Filter out local TV news broadcasts
+        if (/\b\d+\s*(p|a)\.?m\.?\b/i.test(item.title) && /news at|top stories|evening news|morning news/i.test(item.title)) return false;
+        seen.add(item.title);
+        return true;
+      }).slice(0, 12);
       
-      // Combine and deduplicate
-      const seen = new Set(headlines.map(h => h.title));
-      const combined = [...headlines, ...techNews.filter(t => !seen.has(t.title))].slice(0, 12);
-      
-      setCached('trending_news', combined, 600_000); // 10 min cache
-      res.json(combined);
+      setCached('trending_news', deduped, 600_000); // 10 min cache
+      res.json(deduped);
     } catch (error) {
       logger.error('Trending news fetch error:', error);
       res.status(500).json({ error: 'Failed to fetch trending news' });
