@@ -233,12 +233,13 @@ export async function searchSerpAPINews(query, num = 15) {
       title: result.title || 'Untitled',
       url: result.link || '',
       snippet: result.snippet || '',
-      source: result.source || (result.source_id || 'Google News'),
+      source: typeof result.source === 'string' ? result.source : (result.source?.name || result.source_id || 'Google News'),
       sourceDomain: extractDomain(result.link || ''),
+      authors: typeof result.source === 'object' ? (result.source?.authors || []) : [],
       relevanceScore: (10 - i) / 10,
       date: result.date || result.publish_date || null,
       type: 'news',
-      thumbnail: result.thumbnail || '',
+      thumbnail: result.thumbnail || (result.source?.icon || ''),
     }));
   } catch (error) {
     console.error('SerpAPI News error:', error.message);
