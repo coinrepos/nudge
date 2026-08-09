@@ -4,10 +4,11 @@ dotenv.config();
 
 // Publisher credentials
 const AWIN_PUBLISHER_ID = process.env.AWIN_PUBLISHER_ID || '2782536';
+const AWIN_API_TOKEN = process.env.AWIN_API_TOKEN || '';
 const CJ_PID = process.env.CJ_PID || '';
 const DEFAULT_CASHBACK_RATE = parseFloat(process.env.DEFAULT_CASHBACK_RATE || '3.50');
 
-// CJ tracking domains (rotated randomly — CJ uses several)
+// CJ tracking domains (rotated randomly)
 const CJ_TRACKING_DOMAINS = [
   'www.kqzyfj.com',
   'www.tkqlhyc.com',
@@ -17,38 +18,129 @@ const CJ_TRACKING_DOMAINS = [
 ];
 
 /**
- * Merchant mapping table
- * Maps merchant domains to their network + merchant IDs
- * 
- * To add a merchant:
- * 1. Join the merchant's program in Awin or CJ dashboard
- * 2. Find the merchant ID (Awin: awinmid in Link Builder; CJ: AID in Advertiser list)
- * 3. Add an entry below with the domain, network, and merchant ID
+ * In-memory cache of merchant mapping
+ * Populated by syncAwinProgrammes() — maps domain → { network, merchantId, rate }
+ * Refreshed every hour or on demand
  */
-const MERCHANT_MAP = {
-  // === AWIN MERCHANTS ===
-  // Format: 'domain': { network: 'awin', merchantId: 'awinmid_value', rate: X.X }
-  
-  // === CJ MERCHANTS ===
-  // Format: 'domain': { network: 'cj', merchantId: 'AID_value', rate: X.X }
-};
+let merchantMap = {};
+let lastSyncTime = null;
+const SYNC_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
-// Known merchant cashback rates (display purposes — actual rate set per-merchant above)
-const DEFAULT_MERCHANT_RATES = {
-  'amazon.com': 4.0,
-  'amazon.co.uk': 4.0,
-  'amazon.ca': 4.0,
-  'ebay.com': 2.5,
-  'etsy.com': 3.0,
-  'walmart.com': 2.0,
-  'target.com': 2.0,
-  'bestbuy.com': 1.5,
-  'aliexpress.com': 5.0,
-  'alibaba.com': 4.5,
-  'booking.com': 3.0,
-  'expedia.com': 3.0,
-  'hotels.com': 3.0,
-};
+/**
+ * Fetch joined programmes from Awin API and build merchant mapping
+ * Uses validDomains from each programme to map domains → advertiserId
+ */
+export async function syncAwinProgrammes() {
+  if (!AWIN_API_TOKEN || !AWIN_PUBLISHER_ID) {
+    console.log('[Affiliate] Awin API token not configured — skipping sync');
+    return;
+  }
+
+  try {
+    console.log('[Affiliate] Syncing Awin joined programmes...');
+    const url = `https://api.awin.com/publishers/${AWIN_PUBLISHER_ID}/programmes?relationship=joined`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${AWIN_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Awin API returned ${response.status}: ${response.statusText}`);
+    }
+
+    const programmes = await response.json();
+    console.log(`[Affiliate] Found ${programmes.length} joined Awin programmes`);
+
+    const newMap = {};
+
+    for (const programme of programmes) {
+      const advertiserId = programme.id;
+      const name = programme.name;
+      const displayUrl = programme.displayUrl || '';
+      const validDomains = programme.validDomains || [];
+      const deeplinkEnabled = programme.deeplinkEnabled !== false;
+
+      // Extract domain from displayUrl
+      let primaryDomain = '';
+      if (displayUrl) {
+        try {
+          primaryDomain = new URL(displayUrl).hostname.replace('www.', '');
+        } catch {}
+      }
+
+      // Add all valid domains to the mapping
+      const allDomains = new Set(validDomains);
+      if (primaryDomain) allDomains.add(primaryDomain);
+
+      for (const domain of allDomains) {
+        if (!domain) continue;
+        const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').trim();
+        if (!cleanDomain) continue;
+
+        newMap[cleanDomain] = {
+          network: 'awin',
+          merchantId: String(advertiserId),
+          merchantName: name,
+          deeplinkEnabled,
+          rate: DEFAULT_CASHBACK_RATE, // Default rate; can be overridden per-merchant
+        };
+      }
+    }
+
+    // Merge with any existing CJ entries (preserve CJ merchants)
+    for (const [domain, entry] of Object.entries(merchantMap)) {
+      if (entry.network === 'cj' && !newMap[domain]) {
+        newMap[domain] = entry;
+      }
+    }
+
+    merchantMap = newMap;
+    lastSyncTime = Date.now();
+    console.log(`[Affiliate] Merchant mapping built: ${Object.keys(merchantMap).length} domains`);
+  } catch (err) {
+    console.error('[Affiliate] Error syncing Awin programmes:', err.message);
+    // Keep existing mapping on error
+  }
+}
+
+/**
+ * Ensure the merchant map is fresh — sync if stale or empty
+ */
+async function ensureMerchantMapFresh() {
+  if (!lastSyncTime || Date.now() - lastSyncTime > SYNC_INTERVAL_MS) {
+    await syncAwinProgrammes();
+  }
+}
+
+/**
+ * Add a CJ merchant to the mapping manually
+ * Call this when you join a CJ advertiser program
+ */
+export function addCjMerchant(domain, advertiserId, rate) {
+  const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').trim();
+  merchantMap[cleanDomain] = {
+    network: 'cj',
+    merchantId: String(advertiserId),
+    rate: rate || DEFAULT_CASHBACK_RATE,
+  };
+  console.log(`[Affiliate] Added CJ merchant: ${cleanDomain} → AID ${advertiserId}`);
+}
+
+/**
+ * Manually add an Awin merchant (for cases where API sync misses one)
+ */
+export function addAwinMerchant(domain, awinmid, rate) {
+  const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').trim();
+  merchantMap[cleanDomain] = {
+    network: 'awin',
+    merchantId: String(awinmid),
+    rate: rate || DEFAULT_CASHBACK_RATE,
+  };
+  console.log(`[Affiliate] Added Awin merchant: ${cleanDomain} → awinmid ${awinmid}`);
+}
 
 function getCjTrackingDomain() {
   return CJ_TRACKING_DOMAINS[Math.floor(Math.random() * CJ_TRACKING_DOMAINS.length)];
@@ -56,15 +148,16 @@ function getCjTrackingDomain() {
 
 /**
  * Wrap a URL with the appropriate affiliate network tracking
- * Checks Awin first, then CJ, then returns plain URL if no match
+ * Checks the merchant map (auto-synced from Awin API) for matching domain
  */
-export function wrapWithAffiliate(url, query = '') {
-  if (!url) return { url, affiliateUrl: url, cashbackRate: 0, network: null, merchant: null };
+export async function wrapWithAffiliate(url, query = '') {
+  if (!url) return { url, affiliateUrl: url, cashbackRate: 0, network: null, merchant: null, isAffiliateEligible: false };
+
+  await ensureMerchantMapFresh();
 
   const domain = extractDomain(url);
   const merchantEntry = findMerchantEntry(domain);
 
-  // No merchant match — return plain URL (no affiliate tracking)
   if (!merchantEntry) {
     return { 
       url, 
@@ -79,7 +172,7 @@ export function wrapWithAffiliate(url, query = '') {
   let affiliateUrl = url;
 
   if (merchantEntry.network === 'awin') {
-    // Awin deep link format
+    // Awin deep link format — construct directly (no API call needed)
     affiliateUrl = `https://www.awin1.com/cread.php?awinmid=${merchantEntry.merchantId}&awinaffid=${AWIN_PUBLISHER_ID}&clickref=nudge&ued=${encodeURIComponent(url)}`;
   } else if (merchantEntry.network === 'cj' && CJ_PID) {
     // CJ deep link format
@@ -95,6 +188,7 @@ export function wrapWithAffiliate(url, query = '') {
     cashbackRate, 
     network: merchantEntry.network,
     merchant: domain,
+    merchantName: merchantEntry.merchantName,
     isAffiliateEligible: true,
   };
 }
@@ -105,12 +199,10 @@ export function wrapWithAffiliate(url, query = '') {
 function findMerchantEntry(domain) {
   if (!domain) return null;
   
-  // Exact match
-  if (MERCHANT_MAP[domain]) return MERCHANT_MAP[domain];
+  if (merchantMap[domain]) return merchantMap[domain];
   
-  // Partial match (handles subdomains like 'www.amazon.com' matching 'amazon.com')
-  for (const [mappedDomain, entry] of Object.entries(MERCHANT_MAP)) {
-    if (domain.includes(mappedDomain)) return entry;
+  for (const [mappedDomain, entry] of Object.entries(merchantMap)) {
+    if (domain.includes(mappedDomain) || mappedDomain.includes(domain)) return entry;
   }
   
   return null;
@@ -121,11 +213,6 @@ function findMerchantEntry(domain) {
  */
 export function getCashbackRate(domain) {
   if (!domain) return DEFAULT_CASHBACK_RATE;
-
-  for (const [merchant, rate] of Object.entries(DEFAULT_MERCHANT_RATES)) {
-    if (domain.includes(merchant)) return rate;
-  }
-
   return DEFAULT_CASHBACK_RATE;
 }
 
@@ -149,11 +236,25 @@ export function isAffiliateEligible(url) {
  * Get list of all configured merchants (for display on Nudge Cash page)
  */
 export function getConfiguredMerchants() {
-  return Object.entries(MERCHANT_MAP).map(([domain, entry]) => ({
+  return Object.entries(merchantMap).map(([domain, entry]) => ({
     domain,
     network: entry.network,
-    rate: entry.rate || getCashbackRate(domain),
+    merchantName: entry.merchantName || domain,
+    rate: entry.rate || DEFAULT_CASHBACK_RATE,
   }));
+}
+
+/**
+ * Get sync status info
+ */
+export function getSyncStatus() {
+  return {
+    merchantCount: Object.keys(merchantMap).length,
+    lastSync: lastSyncTime ? new Date(lastSyncTime).toISOString() : null,
+    nextSync: lastSyncTime ? new Date(lastSyncTime + SYNC_INTERVAL_MS).toISOString() : null,
+    awinConfigured: !!(AWIN_API_TOKEN && AWIN_PUBLISHER_ID),
+    cjConfigured: !!CJ_PID,
+  };
 }
 
 function extractDomain(url) {
@@ -168,5 +269,4 @@ export const AFFILIATE_CONFIG = {
   awinPublisherId: AWIN_PUBLISHER_ID,
   cjPid: CJ_PID,
   defaultRate: DEFAULT_CASHBACK_RATE,
-  merchantCount: Object.keys(MERCHANT_MAP).length,
 };

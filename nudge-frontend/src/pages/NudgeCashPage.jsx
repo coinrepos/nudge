@@ -5,14 +5,6 @@ import AffiliateDisclosure from '../components/AffiliateDisclosure'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-const MERCHANT_RATES = [
-  { merchant: 'Add merchants via Awin & CJ', rate: '—', domains: 'Join programs to activate cashback' },
-]
-
-// Note: Merchants are activated as the publisher joins affiliate programs
-// on Awin (awinmid) and CJ Affiliate (AID). Each joined merchant's links
-// will be automatically wrapped with affiliate tracking.
-
 const MIN_WITHDRAWAL = 10.00
 
 export default function NudgeCashPage() {
@@ -28,6 +20,9 @@ export default function NudgeCashPage() {
   const [withdrawEmail, setWithdrawEmail] = useState('')
   const [withdrawStatus, setWithdrawStatus] = useState(null)
   const [toast, setToast] = useState(null)
+  const [merchants, setMerchants] = useState([])
+  const [syncStatus, setSyncStatus] = useState(null)
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     if (!accessToken) return
@@ -38,19 +33,47 @@ export default function NudgeCashPage() {
     setLoading(true)
     try {
       const headers = { Authorization: `Bearer ${accessToken}` }
-      const [statsRes, txRes, clicksRes] = await Promise.all([
+      const [statsRes, txRes, clicksRes, merchantsRes] = await Promise.all([
         fetch(`${API_URL}/nudge-cash/stats`, { headers }),
         fetch(`${API_URL}/nudge-cash/transactions`, { headers }),
         fetch(`${API_URL}/nudge-cash/clicks`, { headers }),
+        fetch(`${API_URL}/nudge-cash/merchants`, { headers }),
       ])
 
       if (statsRes.ok) setStats(await statsRes.json())
       if (txRes.ok) setTransactions(await txRes.json())
       if (clicksRes.ok) setClicks(await clicksRes.json())
+      if (merchantsRes.ok) {
+        const merchData = await merchantsRes.json()
+        setMerchants(merchData.merchants || [])
+        setSyncStatus(merchData.syncStatus || null)
+      }
     } catch (err) {
       console.error('Failed to fetch Nudge Cash data:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSyncMerchants = async () => {
+    setSyncing(true)
+    try {
+      const res = await fetch(`${API_URL}/nudge-cash/sync-merchants`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setMerchants(getConfiguredMerchantsForDisplay(data))
+        setSyncStatus(data.syncStatus)
+        showToast(`Synced ${data.count} merchants from Awin`, 'success')
+      } else {
+        showToast('Sync failed — check API token', 'error')
+      }
+    } catch (err) {
+      showToast('Network error during sync', 'error')
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -243,7 +266,7 @@ export default function NudgeCashPage() {
           className={`cash-tab ${activeTab === 'merchants' ? 'active' : ''}`}
           onClick={() => setActiveTab('merchants')}
         >
-          Cashback Rates
+          Active Merchants ({merchants.length})
         </button>
       </div>
 

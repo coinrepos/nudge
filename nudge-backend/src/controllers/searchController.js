@@ -44,16 +44,21 @@ const searchController = {
 
       // Wrap Shopping reel results with affiliate links + cashback info
       if (categorizedResults.shopping && categorizedResults.shopping.length > 0) {
-        categorizedResults.shopping = categorizedResults.shopping.map(result => {
-          const affiliate = wrapWithAffiliate(result.url, query);
-          return {
-            ...result,
-            affiliateUrl: affiliate.affiliateUrl,
-            cashbackRate: affiliate.cashbackRate,
-            merchant: affiliate.merchant,
-            isAffiliateEligible: isAffiliateEligible(result.url),
-          };
-        });
+        const shoppingWithAffiliate = await Promise.all(
+          categorizedResults.shopping.map(async (result) => {
+            const affiliate = await wrapWithAffiliate(result.url, query);
+            return {
+              ...result,
+              affiliateUrl: affiliate.affiliateUrl,
+              cashbackRate: affiliate.cashbackRate,
+              merchant: affiliate.merchant,
+              merchantName: affiliate.merchantName,
+              network: affiliate.network,
+              isAffiliateEligible: affiliate.isAffiliateEligible,
+            };
+          })
+        );
+        categorizedResults.shopping = shoppingWithAffiliate;
       }
 
       const isWinning = checkWinningCombination(categorizedResults);
