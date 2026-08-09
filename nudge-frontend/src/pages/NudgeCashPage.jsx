@@ -6,7 +6,7 @@ import AffiliateDisclosure from '../components/AffiliateDisclosure'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const MERCHANT_RATES = [
-  { merchant: 'Amazon', rate: '4.0%', domains: 'amazon.com, amazon.co.uk, amazon.ca' },
+  { merchant: 'Amazon (via Skimlinks)', rate: '4.0%', domains: 'amazon.com, amazon.co.uk, amazon.ca' },
   { merchant: 'eBay', rate: '2.5%', domains: 'ebay.com' },
   { merchant: 'Etsy', rate: '3.0%', domains: 'etsy.com' },
   { merchant: 'Walmart', rate: '2.0%', domains: 'walmart.com' },
