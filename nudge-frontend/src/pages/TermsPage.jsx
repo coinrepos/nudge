@@ -144,7 +144,8 @@ export default function TermsPage() {
               Nudge currently participates in the following affiliate programs:
             </p>
             <ul>
-              <li><strong>Skimlinks</strong> — multi-merchant affiliate network (48,500+ merchants including Amazon, eBay, Walmart, and more). Publisher Code 306889X1795159</li>
+              <li><strong>Awin</strong> — global affiliate network (30,000+ advertisers). Publisher ID 2782536</li>
+              <li><strong>CJ Affiliate</strong> — global affiliate network (600+ top brands). Publisher PID configured per website.</li>
             </ul>
             <p>
               Additional affiliate programs may be added over time. All affiliate relationships will be

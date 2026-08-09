@@ -75,7 +75,7 @@ function App() {
             <p>Nudge — Spin to discover. Explore to earn.</p>
             <p className="footer-note">Social credits are purely cosmetic. Nudge Cash is real cashback from shopping. No dark patterns.</p>
             <p className="footer-disclosure">
-              Nudge participates in the Skimlinks affiliate network. When you shop through links on the Shopping reel, we may earn a commission at no extra cost to you. This does not influence search results. This does not influence search results. <a href="/terms">Full disclosure &amp; Terms →</a>
+              Nudge participates in affiliate programs via Awin and CJ Affiliate. When you shop through links on the Shopping reel, we may earn a commission at no extra cost to you. This does not influence search results. This does not influence search results. <a href="/terms">Full disclosure &amp; Terms →</a>
             </p>
             <div className="footer-legal-links">
               <a href="/terms">Terms &amp; Conditions</a>

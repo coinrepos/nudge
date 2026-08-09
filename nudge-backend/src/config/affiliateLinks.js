@@ -2,16 +2,42 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const SKIMLINKS_PUBLISHER_CODE = process.env.SKIMLINKS_PUBLISHER_CODE || '306889X1795159';
+// Publisher credentials
+const AWIN_PUBLISHER_ID = process.env.AWIN_PUBLISHER_ID || '2782536';
+const CJ_PID = process.env.CJ_PID || '';
 const DEFAULT_CASHBACK_RATE = parseFloat(process.env.DEFAULT_CASHBACK_RATE || '3.50');
 
-// Known merchant cashback rates (as % of purchase)
-// All merchants are accessed via Skimlinks — no per-merchant signup needed
-const MERCHANT_RATES = {
+// CJ tracking domains (rotated randomly — CJ uses several)
+const CJ_TRACKING_DOMAINS = [
+  'www.kqzyfj.com',
+  'www.tkqlhyc.com',
+  'www.anrdoezrs.net',
+  'www.dpbolvw.net',
+  'www.jdoqocy.com',
+];
+
+/**
+ * Merchant mapping table
+ * Maps merchant domains to their network + merchant IDs
+ * 
+ * To add a merchant:
+ * 1. Join the merchant's program in Awin or CJ dashboard
+ * 2. Find the merchant ID (Awin: awinmid in Link Builder; CJ: AID in Advertiser list)
+ * 3. Add an entry below with the domain, network, and merchant ID
+ */
+const MERCHANT_MAP = {
+  // === AWIN MERCHANTS ===
+  // Format: 'domain': { network: 'awin', merchantId: 'awinmid_value', rate: X.X }
+  
+  // === CJ MERCHANTS ===
+  // Format: 'domain': { network: 'cj', merchantId: 'AID_value', rate: X.X }
+};
+
+// Known merchant cashback rates (display purposes — actual rate set per-merchant above)
+const DEFAULT_MERCHANT_RATES = {
   'amazon.com': 4.0,
   'amazon.co.uk': 4.0,
   'amazon.ca': 4.0,
-  'amazon.de': 3.5,
   'ebay.com': 2.5,
   'etsy.com': 3.0,
   'walmart.com': 2.0,
@@ -24,30 +50,79 @@ const MERCHANT_RATES = {
   'hotels.com': 3.0,
 };
 
-/**
- * Wrap a URL with Skimlinks affiliate tracking
- * Skimlinks handles all merchants (48,500+) — no per-merchant signup needed
- */
-export function wrapWithAffiliate(url, query = '') {
-  if (!url) return { url, affiliateUrl: url, cashbackRate: 0 };
-
-  const domain = extractDomain(url);
-
-  // All links go through Skimlinks — they handle Amazon, eBay, and 48k+ other merchants
-  const affiliateUrl = `https://go.skimresources.com/?id=${SKIMLINKS_PUBLISHER_CODE}&xs=1&url=${encodeURIComponent(url)}`;
-
-  const cashbackRate = getCashbackRate(domain);
-
-  return { url, affiliateUrl, cashbackRate, merchant: domain };
+function getCjTrackingDomain() {
+  return CJ_TRACKING_DOMAINS[Math.floor(Math.random() * CJ_TRACKING_DOMAINS.length)];
 }
 
 /**
- * Get the cashback rate for a merchant domain
+ * Wrap a URL with the appropriate affiliate network tracking
+ * Checks Awin first, then CJ, then returns plain URL if no match
+ */
+export function wrapWithAffiliate(url, query = '') {
+  if (!url) return { url, affiliateUrl: url, cashbackRate: 0, network: null, merchant: null };
+
+  const domain = extractDomain(url);
+  const merchantEntry = findMerchantEntry(domain);
+
+  // No merchant match — return plain URL (no affiliate tracking)
+  if (!merchantEntry) {
+    return { 
+      url, 
+      affiliateUrl: url, 
+      cashbackRate: 0, 
+      network: null, 
+      merchant: domain,
+      isAffiliateEligible: false,
+    };
+  }
+
+  let affiliateUrl = url;
+
+  if (merchantEntry.network === 'awin') {
+    // Awin deep link format
+    affiliateUrl = `https://www.awin1.com/cread.php?awinmid=${merchantEntry.merchantId}&awinaffid=${AWIN_PUBLISHER_ID}&clickref=nudge&ued=${encodeURIComponent(url)}`;
+  } else if (merchantEntry.network === 'cj' && CJ_PID) {
+    // CJ deep link format
+    const trackingDomain = getCjTrackingDomain();
+    affiliateUrl = `https://${trackingDomain}/click-${CJ_PID}-${merchantEntry.merchantId}?url=${encodeURIComponent(url)}`;
+  }
+
+  const cashbackRate = merchantEntry.rate || getCashbackRate(domain);
+
+  return { 
+    url, 
+    affiliateUrl, 
+    cashbackRate, 
+    network: merchantEntry.network,
+    merchant: domain,
+    isAffiliateEligible: true,
+  };
+}
+
+/**
+ * Find merchant entry by domain — checks exact match first, then partial
+ */
+function findMerchantEntry(domain) {
+  if (!domain) return null;
+  
+  // Exact match
+  if (MERCHANT_MAP[domain]) return MERCHANT_MAP[domain];
+  
+  // Partial match (handles subdomains like 'www.amazon.com' matching 'amazon.com')
+  for (const [mappedDomain, entry] of Object.entries(MERCHANT_MAP)) {
+    if (domain.includes(mappedDomain)) return entry;
+  }
+  
+  return null;
+}
+
+/**
+ * Get the display cashback rate for a merchant domain
  */
 export function getCashbackRate(domain) {
   if (!domain) return DEFAULT_CASHBACK_RATE;
 
-  for (const [merchant, rate] of Object.entries(MERCHANT_RATES)) {
+  for (const [merchant, rate] of Object.entries(DEFAULT_MERCHANT_RATES)) {
     if (domain.includes(merchant)) return rate;
   }
 
@@ -62,12 +137,23 @@ export function calculateCashback(purchaseAmount, rate) {
 }
 
 /**
- * Check if a URL is from a supported affiliate merchant
- * With Skimlinks, all merchant links in their network are eligible
+ * Check if a URL is from a joined affiliate merchant
  */
 export function isAffiliateEligible(url) {
   if (!url) return false;
-  return true; // Skimlinks JS auto-wraps all eligible merchant links
+  const domain = extractDomain(url);
+  return findMerchantEntry(domain) !== null;
+}
+
+/**
+ * Get list of all configured merchants (for display on Nudge Cash page)
+ */
+export function getConfiguredMerchants() {
+  return Object.entries(MERCHANT_MAP).map(([domain, entry]) => ({
+    domain,
+    network: entry.network,
+    rate: entry.rate || getCashbackRate(domain),
+  }));
 }
 
 function extractDomain(url) {
@@ -79,7 +165,8 @@ function extractDomain(url) {
 }
 
 export const AFFILIATE_CONFIG = {
-  skimlinksPublisherCode: SKIMLINKS_PUBLISHER_CODE,
+  awinPublisherId: AWIN_PUBLISHER_ID,
+  cjPid: CJ_PID,
   defaultRate: DEFAULT_CASHBACK_RATE,
-  merchantRates: MERCHANT_RATES,
+  merchantCount: Object.keys(MERCHANT_MAP).length,
 };

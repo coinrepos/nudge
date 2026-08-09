@@ -6,19 +6,12 @@ import AffiliateDisclosure from '../components/AffiliateDisclosure'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 const MERCHANT_RATES = [
-  { merchant: 'Amazon (via Skimlinks)', rate: '4.0%', domains: 'amazon.com, amazon.co.uk, amazon.ca' },
-  { merchant: 'eBay', rate: '2.5%', domains: 'ebay.com' },
-  { merchant: 'Etsy', rate: '3.0%', domains: 'etsy.com' },
-  { merchant: 'Walmart', rate: '2.0%', domains: 'walmart.com' },
-  { merchant: 'Target', rate: '2.0%', domains: 'target.com' },
-  { merchant: 'Best Buy', rate: '1.5%', domains: 'bestbuy.com' },
-  { merchant: 'AliExpress', rate: '5.0%', domains: 'aliexpress.com' },
-  { merchant: 'Alibaba', rate: '4.5%', domains: 'alibaba.com' },
-  { merchant: 'Booking.com', rate: '3.0%', domains: 'booking.com' },
-  { merchant: 'Expedia', rate: '3.0%', domains: 'expedia.com' },
-  { merchant: 'Hotels.com', rate: '3.0%', domains: 'hotels.com' },
-  { merchant: 'Thousands more via Skimlinks', rate: 'Up to 5%+', domains: '48,500+ merchants' },
+  { merchant: 'Add merchants via Awin & CJ', rate: '—', domains: 'Join programs to activate cashback' },
 ]
+
+// Note: Merchants are activated as the publisher joins affiliate programs
+// on Awin (awinmid) and CJ Affiliate (AID). Each joined merchant's links
+// will be automatically wrapped with affiliate tracking.
 
 const MIN_WITHDRAWAL = 10.00
 
