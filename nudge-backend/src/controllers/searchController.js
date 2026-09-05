@@ -10,7 +10,7 @@ const DEFAULT_RESULT_COUNTS = { all: 50, images: 10, videos: 25, news: 15, shopp
 
 const searchController = {
   async performSearch(req, res) {
-    const { query, keywords, resultCounts } = req.body;
+    const { query, keywords, resultCounts, sportsMode } = req.body;
     const userId = req.userId || null;
 
     try {
@@ -23,16 +23,29 @@ const searchController = {
         : query;
 
       const counts = { ...DEFAULT_RESULT_COUNTS, ...(resultCounts || {}) };
-      
+
+      // Sports mode: enrich each category's query so news, videos, shopping and
+      // products reels all fill up — not just live game results.
+      const categoryQueries = sportsMode
+        ? {
+            news: `${enhancedQuery} news`,
+            videos: `${enhancedQuery} highlights`,
+            shopping: `${enhancedQuery} gear merchandise`,
+          }
+        : undefined;
+
       // Check cache first — skip for authenticated users to keep streaks accurate
-      const cacheKey = makeCacheKey(enhancedQuery, keywords, counts);
+      const cacheKey = makeCacheKey(enhancedQuery, keywords, counts) + (sportsMode ? ':sports' : '');
       const cached = getCached(cacheKey);
       if (cached && !userId) {
         // Return cached results for anonymous users (streak tracking skipped)
         return res.json(cached);
       }
 
-      const categorizedResults = await fetchSearchResults(enhancedQuery, { resultCounts: counts });
+      const categorizedResults = await fetchSearchResults(enhancedQuery, {
+        resultCounts: counts,
+        categoryQueries,
+      });
 
       const totalResults = Object.values(categorizedResults).reduce(
         (sum, arr) => sum + arr.length, 0
@@ -256,8 +269,37 @@ const searchController = {
       logger.error('Trending news fetch error:', error);
       res.status(500).json({ error: 'Failed to fetch trending news' });
     }
-  }
+  },
 
+  // Latest sports news + video highlights for the Sports page idle frame
+  async getSportsNews(req, res) {
+    const cached = getCached('sportsNewsFeed');
+    if (cached) return res.json(cached);
+
+    try {
+      const [newsRes, videosRes] = await Promise.allSettled([
+        searchSerpAPINews('latest sports news', 10),
+        searchSerpAPIVideos('sports highlights', 8),
+      ]);
+
+      const news = newsRes.status === 'fulfilled' ? newsRes.value : [];
+      const videos = videosRes.status === 'fulfilled' ? videosRes.value : [];
+
+      let feedNews = news;
+      if (feedNews.length < 5) {
+        const rssNews = await searchGoogleNewsRSS('sports', 10);
+        const seen = new Set(feedNews.map(n => n.url));
+        feedNews = [...feedNews, ...rssNews.filter(n => !seen.has(n.url))].slice(0, 12);
+      }
+
+      const response = { news: feedNews, videos };
+      setCached('sportsNewsFeed', response, 600_000); // 10 min cache
+      res.json(response);
+    } catch (err) {
+      logger.error('Sports news feed error:', err.message);
+      res.json({ news: [], videos: [] });
+    }
+  }
 };
 
 export default searchController;

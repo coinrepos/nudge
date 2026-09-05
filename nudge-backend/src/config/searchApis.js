@@ -329,6 +329,12 @@ function getDemoResults(query) {
 // === Main fetch ===
 export async function fetchSearchResults(query, options = {}) {
   const resultCounts = options.resultCounts || { all: 50, images: 10, videos: 25, news: 15, shopping: 15 };
+  // Optional per-category query modifiers (e.g. sports mode: news -> "X news", videos -> "X highlights")
+  const cq = options.categoryQueries || {};
+  const newsQuery = cq.news || query;
+  const videosQuery = cq.videos || query;
+  const imagesQuery = cq.images || query;
+  const shoppingQuery = cq.shopping || query;
   const categorized = { all: [], images: [], videos: [], news: [], shopping: [] };
 
   if (SERPAPI_KEY) {
@@ -336,9 +342,9 @@ export async function fetchSearchResults(query, options = {}) {
     console.log('Searching with SerpAPI (parallel)...');
     const [serpRes, imagesRes, videosRes, newsRes] = await Promise.allSettled([
       searchSerpAPI(query, resultCounts.all),
-      searchSerpAPIImages(query, resultCounts.images),
-      searchSerpAPIVideos(query, resultCounts.videos),
-      searchSerpAPINews(query, resultCounts.news),
+      searchSerpAPIImages(imagesQuery, resultCounts.images),
+      searchSerpAPIVideos(videosQuery, resultCounts.videos),
+      searchSerpAPINews(newsQuery, resultCounts.news),
     ]);
 
     const serpResults = serpRes.status === 'fulfilled' ? serpRes.value : { organic: [], news: [], shopping: [] };
@@ -347,6 +353,14 @@ export async function fetchSearchResults(query, options = {}) {
     const dedicatedNews = newsRes.status === 'fulfilled' ? newsRes.value : [];
     categorized.news = [...dedicatedNews, ...serpResults.news].slice(0, resultCounts.news);
     categorized.shopping = serpResults.shopping.slice(0, resultCounts.shopping);
+
+    // Sports mode: run a dedicated shopping search with the product-flavoured query
+    if (cq.shopping && shoppingQuery !== query) {
+      const shoppingSerp = await searchSerpAPI(shoppingQuery, resultCounts.shopping);
+      const shoppingDomain = shoppingSerp.shopping || [];
+      const existingUrls = new Set(categorized.shopping.map(r => r.url));
+      categorized.shopping = [...categorized.shopping, ...shoppingDomain.filter(r => !existingUrls.has(r.url))].slice(0, resultCounts.shopping);
+    }
     categorized.images = imagesRes.status === 'fulfilled' ? imagesRes.value : [];
     categorized.videos = videosRes.status === 'fulfilled' ? videosRes.value : [];
 

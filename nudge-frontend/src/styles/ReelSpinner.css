@@ -163,7 +163,7 @@
 
 @keyframes slotScroll {
   0% { transform: translateY(0); }
-  100% { transform: translateY(-420px); } /* 3 symbols x 140px uniform height */
+  100% { transform: translateY(-330px); } /* 3 symbols x 110px uniform height */
 }
 
 .reel-symbol {

@@ -26,7 +26,7 @@ export default function useSearch(accessToken) {
     fetchTrending()
   }, [])
 
-  async function search(query, keywords = []) {
+  async function search(query, keywords = [], extra = {}) {
     if (!query.trim()) return
     setLoading(true)
     setError(null)
@@ -38,7 +38,7 @@ export default function useSearch(accessToken) {
 
       const response = await axios.post(
         `${API_URL}/search/query`,
-        { query, keywords },
+        { query, keywords, ...extra },
         config
       )
 

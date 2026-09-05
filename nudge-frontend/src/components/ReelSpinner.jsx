@@ -10,8 +10,8 @@ const CATEGORIES = [
   { key: 'shopping', label: 'Shopping', icon: '🛒' },
 ]
 
-// Uniform symbol height for ALL reels — keeps every reel the same size
-const SYMBOL_HEIGHT = 140
+// Uniform symbol height for ALL reels — compact so more results fit on the page
+const SYMBOL_HEIGHT = 110
 
 // Default grid: 5 reels wide, 4 rows deep (single-category view shows more rows)
 const ALL_ROWS = 4

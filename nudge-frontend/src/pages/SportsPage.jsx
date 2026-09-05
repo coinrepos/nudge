@@ -6,6 +6,8 @@ import SportsInfoCard from '../components/SportsInfoCard'
 import useSearch from '../hooks/useSearch'
 import '../styles/SportsPage.css'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
 const LEAGUE_FILTERS = [
   { id: 'all', label: 'All Sports' },
   { id: '4328', label: 'EPL' },
@@ -19,6 +21,16 @@ const LEAGUE_FILTERS = [
   { id: '4370', label: 'F1' },
 ]
 
+// Static teasers for the idle Shopping reel
+const SPORTS_SHOP_TEASERS = [
+  { icon: '👕', title: 'Official team jerseys & kits', tag: 'Gear' },
+  { icon: '👟', title: 'Latest boots & trainers', tag: 'New season' },
+  { icon: '🧢', title: 'Caps, scarves & fan merch', tag: 'Fan zone' },
+  { icon: '🏋️', title: 'Training & gym equipment', tag: 'Kit up' },
+  { icon: '🎟️', title: 'Match tickets & experiences', tag: 'Live' },
+  { icon: '🎁', title: 'Signed memorabilia', tag: 'Collect' },
+]
+
 export default function SportsPage() {
   // View mode: 'search' (default) or 'hub' (the SportsHub dashboard)
   const [view, setView] = useState('search')
@@ -30,28 +42,22 @@ export default function SportsPage() {
   const [dashboard, setDashboard] = useState(null)
   const [activeFilter, setActiveFilter] = useState('all')
   const [hubLoading, setHubLoading] = useState(false)
+  const [sportsFeed, setSportsFeed] = useState({ news: [], videos: [] })
 
-  // Load the SportsHub dashboard lazily — only when the user opens the Hub view
-  const fetchDashboard = async () => {
-    setHubLoading(true)
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/sports/dashboard`)
-      if (res.ok) {
-        const data = await res.json()
-        setDashboard(data)
-      }
-    } catch (err) {
-      console.error('Failed to fetch sports data:', err)
-    } finally {
-      setHubLoading(false)
-    }
-  }
+  // Load the fixtures dashboard + sports news feed on mount — both feed the idle frame
+  useEffect(() => {
+    fetch(`${API_URL}/sports/dashboard`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setDashboard(d))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
-    if (view === 'hub' && !dashboard && !hubLoading) {
-      fetchDashboard()
-    }
-  }, [view])
+    fetch(`${API_URL}/search/sports-news`)
+      .then(r => r.ok ? r.json() : { news: [], videos: [] })
+      .then(d => setSportsFeed({ news: d.news || [], videos: d.videos || [] }))
+      .catch(() => {})
+  }, [])
 
   // Filter dashboard data by selected league
   const filteredDashboard = useMemo(() => {
@@ -73,12 +79,43 @@ export default function SportsPage() {
     }
   }, [dashboard, activeFilter])
 
+  // Idle reel content — fixtures, sports news, highlights and gear
+  const idleReels = useMemo(() => {
+    const fixtures = (dashboard?.todayEvents || []).slice(0, 10).map(e => ({
+      icon: '⚡',
+      title: `${e.homeTeam || e.home?.name || ''} vs ${e.awayTeam || e.away?.name || ''}`.trim(),
+      tag: e.league || e.time || 'Fixture',
+    }))
+    const newsCards = sportsFeed.news.map(n => ({
+      icon: '📰',
+      title: n.title,
+      tag: n.source || 'News',
+    }))
+    const videoCards = sportsFeed.videos.map(v => ({
+      icon: '🎬',
+      title: v.title,
+      tag: 'Highlights',
+    }))
+    return {
+      all: [...fixtures.slice(0, 5), ...newsCards.slice(0, 4)],
+      images: [...fixtures.slice(5), ...fixtures.slice(0, 4)],
+      videos: videoCards.length > 0
+        ? videoCards
+        : [{ icon: '🎬', title: 'Match highlights loading…', tag: 'Video' }],
+      news: newsCards.length > 0
+        ? newsCards
+        : [{ icon: '📰', title: 'Sports headlines loading…', tag: 'News' }],
+      shopping: SPORTS_SHOP_TEASERS,
+    }
+  }, [dashboard, sportsFeed])
+
   const handleFilterClick = (leagueId) => {
     setActiveFilter(String(leagueId))
   }
 
   const handleSearch = (query) => {
-    search(query)
+    // Sports mode: every category reel gets a sports-flavoured query
+    search(query, [], { sportsMode: true })
   }
 
   // Lazy-load the sports spinner to keep the initial bundle small
@@ -114,21 +151,17 @@ export default function SportsPage() {
             placeholder="Search teams, players, matches…"
           />
 
-          {/* Loading spinner */}
-          {loading && (
-            <div className="sports-loading">
-              <div className="sports-spinner" />
-              <p>Searching sports…</p>
-            </div>
-          )}
-
-          {/* Error message */}
-          {error && !loading && (
-            <div className="error-message">{error}</div>
-          )}
-
-          {/* Results */}
-          {results && !loading && (
+          {/* The slot frame — idles with sports content, spins while searching */}
+          {loading || !results ? (
+            !error && (
+              <ReelSpinner
+                idle
+                loading={loading}
+                loadingMessage="Searching sports…"
+                idleReels={idleReels}
+              />
+            )
+          ) : (
             <>
               {results?.sportsData && <SportsInfoCard sportsData={results.sportsData} />}
               <ReelSpinner
@@ -140,12 +173,15 @@ export default function SportsPage() {
             </>
           )}
 
+          {/* Error message */}
+          {error && !loading && (
+            <div className="error-message">{error}</div>
+          )}
+
           {/* Empty state */}
           {!results && !loading && !error && (
             <div className="sports-search-empty">
-              <div className="empty-icon">🏟️</div>
-              <p>Search for a team, player, or sport — results appear on the reels.</p>
-              <p className="empty-hint">Or hit <strong>⚡ Latest Scores</strong> above for the live SportsHub.</p>
+              <p className="empty-hint">Search a team, player or sport — every reel fills with <strong>news, highlights, fixtures & gear</strong>.</p>
             </div>
           )}
         </div>
@@ -166,7 +202,7 @@ export default function SportsPage() {
             ))}
           </div>
 
-          {hubLoading && (
+          {(!dashboard || hubLoading) && (
             <div className="sports-loading">
               <div className="sports-spinner" />
               <p>Loading sports data…</p>

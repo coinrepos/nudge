@@ -8,5 +8,6 @@ router.post('/query', optionalAuth, searchController.performSearch);
 router.get('/history', auth, searchController.getSearchHistory);
 router.get('/trending', searchController.getTrendingSearches);
 router.get('/trending-news', searchController.getTrendingNews);
+router.get('/sports-news', searchController.getSportsNews);
 
 export default router;
