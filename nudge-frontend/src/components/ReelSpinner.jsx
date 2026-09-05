@@ -10,14 +10,8 @@ const CATEGORIES = [
   { key: 'shopping', label: 'Shopping', icon: '🛒' },
 ]
 
-const SYMBOL_HEIGHT = 110
-const THUMB_SYMBOL_HEIGHT = 190  // Taller for cards with thumbnails (image/video/shopping/news)
-
-function getReelHeight(catKey, reel) {
-  if (!reel || reel.length === 0) return SYMBOL_HEIGHT
-  const hasThumbs = reel.some(r => r.thumbnail)
-  return hasThumbs ? THUMB_SYMBOL_HEIGHT : SYMBOL_HEIGHT
-}
+// Uniform symbol height for ALL reels — keeps every reel the same size
+const SYMBOL_HEIGHT = 140
 
 // === Search Result Detail Modal ===
 function ResultModal({ result, onClose }) {
@@ -96,6 +90,10 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
   const [selectedResult, setSelectedResult] = useState(null)
   const timersRef = useRef([])
 
+  // Per-reel pagination: which page (start index) each reel is currently showing.
+  // Reels advance SEQUENTIALLY — first entries, then the next batch, and so on.
+  const pageStartsRef = useRef({})
+
   useEffect(() => {
     return () => { timersRef.current.forEach(t => clearTimeout(t)) }
   }, [])
@@ -105,6 +103,12 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
     : CATEGORIES.filter(c => c.key === activeCategory)
 
   const visibleSymbols = activeCategory === 'all' ? 3 : 5
+
+  // New search → reset every reel back to the first page
+  useEffect(() => {
+    pageStartsRef.current = {}
+    setFinalPositions({})
+  }, [reels])
 
   const displayedReels = useMemo(() => {
     if (!reels) return {}
@@ -118,6 +122,21 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
     return reels
   }, [reels, resultMode])
 
+  // Advance a reel to its next sequential page; returns the page start index to display
+  const advanceReel = (catKey, reelLength) => {
+    const current = pageStartsRef.current[catKey] || 0
+    let next = current + visibleSymbols
+    if (next >= reelLength) next = 0 // wrap back to the first entries
+    pageStartsRef.current[catKey] = next
+    return next
+  }
+
+  // The reel's currently displayed start index (drives the range badge)
+  const getDisplayStart = (catKey) => {
+    const pos = finalPositions[catKey] || 0
+    return pos / SYMBOL_HEIGHT
+  }
+
   const handleSpin = () => {
     if (isSpinning) return
     const hasResults = visibleCats.some(cat => {
@@ -128,24 +147,26 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
 
     setIsSpinning(true)
     const spinning = {}
-    const positions = {}
     visibleCats.forEach(cat => {
       spinning[cat.key] = true
-      positions[cat.key] = 0
     })
     setSpinningReels(spinning)
-    setFinalPositions(positions)
 
     visibleCats.forEach((cat, index) => {
       const reel = displayedReels[cat.key] || []
       const stopDelay = 1200 + index * 250
 
       const timer = setTimeout(() => {
-        const reelHeight = getReelHeight(cat.key, reel)
-        const finalIndex = reel.length <= visibleSymbols
-          ? 0
-          : Math.floor(Math.random() * (reel.length - visibleSymbols + 1))
-        setFinalPositions(prev => ({ ...prev, [cat.key]: finalIndex * reelHeight }))
+        // Land on the NEXT sequential page of results
+        let finalIndex = 0
+        if (resultMode === 'random') {
+          finalIndex = reel.length <= visibleSymbols
+            ? 0
+            : Math.floor(Math.random() * (reel.length - visibleSymbols + 1))
+        } else {
+          finalIndex = advanceReel(cat.key, reel.length)
+        }
+        setFinalPositions(prev => ({ ...prev, [cat.key]: finalIndex * SYMBOL_HEIGHT }))
         setSpinningReels(prev => ({ ...prev, [cat.key]: false }))
       }, stopDelay)
       timersRef.current.push(timer)
@@ -157,6 +178,21 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
       onSpinComplete?.()
     }, totalDuration)
     timersRef.current.push(completeTimer)
+  }
+
+  // Instant (non-animated) advance to the next batch of results
+  const handleNext = () => {
+    if (isSpinning) return
+    const positions = {}
+    visibleCats.forEach(cat => {
+      const reel = displayedReels[cat.key] || []
+      if (reel.length === 0) return
+      const next = resultMode === 'random'
+        ? (reel.length <= visibleSymbols ? 0 : Math.floor(Math.random() * (reel.length - visibleSymbols + 1)))
+        : advanceReel(cat.key, reel.length)
+      positions[cat.key] = next * SYMBOL_HEIGHT
+    })
+    setFinalPositions(prev => ({ ...prev, ...positions }))
   }
 
   const isEmpty = !reels || Object.values(reels).every(arr => !arr || arr.length === 0)
@@ -202,15 +238,24 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
         <div className="slot-reels">
           {visibleCats.map((cat) => {
             const reel = displayedReels[cat.key] || []
+            const start = getDisplayStart(cat.key)
+            const end = Math.min(start + visibleSymbols, reel.length)
             return (
               <div className="slot-reel" key={cat.key}>
-                <div className="reel-label">{cat.icon} {cat.label}</div>
+                <div className="reel-label">
+                  <span>{cat.icon} {cat.label}</span>
+                  {reel.length > 0 && (
+                    <span className="reel-page-badge">
+                      {start + 1}–{end} / {reel.length}
+                    </span>
+                  )}
+                </div>
                 <div
                   className="reel-viewport"
-                  style={{ height: visibleSymbols * getReelHeight(cat.key, reel) }}
+                  style={{ height: visibleSymbols * SYMBOL_HEIGHT }}
                 >
                   <div
-                    className={`reel-track ${spinningReels[cat.key] ? 'spinning' : ''} ${reel.some(r => r.thumbnail) ? 'thumb-reel' : ''}`}
+                    className={`reel-track ${spinningReels[cat.key] ? 'spinning' : ''}`}
                     style={{
                       transform: spinningReels[cat.key]
                         ? undefined
@@ -220,7 +265,7 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
                   >
                     {reel.length > 0 ? (
                       reel.map((result, i) => (
-                        <div className="reel-symbol" key={i} style={{ height: reel.some(r => r.thumbnail) ? THUMB_SYMBOL_HEIGHT : SYMBOL_HEIGHT }}>
+                        <div className="reel-symbol" key={i} style={{ height: SYMBOL_HEIGHT }}>
                           <ResultCard
                             result={result}
                             compact
@@ -229,7 +274,7 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
                         </div>
                       ))
                     ) : (
-                      <div className="reel-symbol empty-symbol" style={{ height: reel.some(r => r.thumbnail) ? THUMB_SYMBOL_HEIGHT : SYMBOL_HEIGHT }}>
+                      <div className="reel-symbol empty-symbol" style={{ height: SYMBOL_HEIGHT }}>
                         <span>No results</span>
                       </div>
                     )}
@@ -240,14 +285,24 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
           })}
         </div>
 
-        {/* Spin button */}
-        <button
-          onClick={handleSpin}
-          disabled={isSpinning}
-          className={`spin-btn ${isWinning ? 'winning' : ''}`}
-        >
-          {isSpinning ? '🎰 Spinning...' : '🎰 SPIN'}
-        </button>
+        {/* Spin + Next controls */}
+        <div className="spin-controls">
+          <button
+            onClick={handleSpin}
+            disabled={isSpinning}
+            className={`spin-btn ${isWinning ? 'winning' : ''}`}
+          >
+            {isSpinning ? '🎰 Spinning...' : '🎰 SPIN'}
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={isSpinning}
+            className="next-btn"
+            title="Show the next batch of results"
+          >
+            Next ▶
+          </button>
+        </div>
 
         {isWinning && (
           <div className="winning-banner">🎉 WINNING COMBINATION! +3 Credits</div>

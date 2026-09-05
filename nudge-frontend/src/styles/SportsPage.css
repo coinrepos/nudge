@@ -377,3 +377,58 @@
 }
 
 .sports-info-link:hover { text-decoration: underline; }
+
+/* === View toggle: Search (default) / Latest Scores (SportsHub) === */
+.sports-view-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+  margin: 0.75rem auto 0;
+  width: fit-content;
+}
+
+.sports-view-btn {
+  padding: 0.55rem 1.3rem;
+  border: none;
+  background: var(--light);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sports-view-btn.active {
+  background: var(--primary);
+  color: var(--darker);
+  font-weight: 700;
+}
+
+.sports-search-view {
+  max-width: 900px;
+  margin: 1rem auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sports-search-empty {
+  text-align: center;
+  color: var(--text-muted);
+  margin-top: 3rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.sports-search-empty .empty-icon {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+}
+
+.sports-search-empty .empty-hint {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
