@@ -68,20 +68,32 @@ export default function ResultCard({ result, compact, onOpenDetail }) {
   const showLargeThumb = hasThumbnail && (isImage || isVideo || isShopping || isNews)
 
   if (compact) {
+    // Highlight detection — unique results get a coloured border
+    const text = `${result.title || ''} ${result.snippet || ''}`.toLowerCase()
+    const isSale = !!(result.price || /(\d+\s?%\s?off|% ?off|on sale|sale\b|discount|clearance|deal\b)/.test(text))
+    const isFree = /free (shipping|delivery|gift|returns?)/.test(text)
+    const hlClass = result.isAffiliateEligible
+      ? 'hl-cashback'
+      : isSale
+        ? 'hl-sale'
+        : isFree
+          ? 'hl-free'
+          : ''
+
     const sourceName = isNews
       ? (result.source || result.sourceDomain || 'News')
       : (result.sourceDomain || result.source || 'Unknown')
     const authors = isNews && result.authors && result.authors.length > 0 ? result.authors.join(', ') : null
 
     return (
-      <div className="result-card compact clickable" onClick={handleCardClick} title="Click for details">
+      <div className={`result-card compact clickable ${hlClass}`} onClick={handleCardClick} title="Click for details">
         {/* Large thumbnail for image/video/shopping/news results */}
         {showLargeThumb && (
           <div className="compact-thumb-wrapper">
             <img
               src={result.thumbnail}
               alt=""
-              className="compact-thumb"
+              className={`compact-thumb ${isShopping ? 'shopping-thumb' : ''}`}
               onError={() => setImgError(true)}
               loading="lazy"
             />

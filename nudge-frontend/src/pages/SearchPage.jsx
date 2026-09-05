@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useMemo, useState } from 'react'
 import { AuthContext } from '../context/AuthContext'
 import SearchBar from '../components/SearchBar'
 import ReelSpinner from '../components/ReelSpinner'
@@ -10,6 +10,29 @@ import AffiliateDisclosure from '../components/AffiliateDisclosure'
 import SportsInfoCard from '../components/SportsInfoCard'
 import TrendingNews from '../components/TrendingNews'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
+// Rotating status messages keep the user engaged while the search runs
+const LOADING_MESSAGES = [
+  'Searching the web…',
+  'Spinning up the reels…',
+  'Rounding up the freshest results…',
+  'Checking live prices and deals…',
+  'Digging through the latest news…',
+  'Polishing your results…',
+  'Almost there — lining up the reels…',
+]
+
+// Static teasers for the idle Shopping reel
+const SALE_TEASERS = [
+  { icon: '🔥', title: 'Flash sales — up to 70% off', tag: 'Today only' },
+  { icon: '💰', title: 'Earn Nudge Cash on shopping', tag: 'Cashback' },
+  { icon: '🆓', title: 'Free shipping deals inside', tag: 'Free' },
+  { icon: '🏷️', title: 'Big brand clearance live now', tag: 'Sale' },
+  { icon: '⚡', title: 'New drops land every hour', tag: 'Fresh' },
+  { icon: '🎁', title: 'Bonus cashback on the Shopping reel', tag: 'Cashback' },
+]
+
 export default function SearchPage() {
   const { user, accessToken } = useContext(AuthContext)
   const { search, results, reels, loading, error, trending } = useSearch(accessToken)
@@ -19,6 +42,38 @@ export default function SearchPage() {
   const [keywords, setKeywords] = useState([])
   const [resultMode, setResultMode] = useState('top')
   const [streakBonus, setStreakBonus] = useState(null)
+
+  // Rotating loading message
+  const [msgIdx, setMsgIdx] = useState(0)
+  useEffect(() => {
+    if (!loading) { setMsgIdx(0); return }
+    const iv = setInterval(() => {
+      setMsgIdx(i => (i + 1) % LOADING_MESSAGES.length)
+    }, 1600)
+    return () => clearInterval(iv)
+  }, [loading])
+
+  // Latest headlines for the idle News reel
+  const [newsItems, setNewsItems] = useState([])
+  useEffect(() => {
+    fetch(`${API_URL}/search/trending-news`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setNewsItems(d.slice(0, 8)) })
+      .catch(() => {})
+  }, [])
+
+  // Idle reel content — trending searches, latest headlines, and sale teasers
+  const idleReels = useMemo(() => {
+    const trendCards = trending.map(t => ({ icon: '📈', title: t.query, tag: 'Trending' }))
+    const newsCards = newsItems.map(n => ({ icon: '📰', title: n.title, tag: n.source || 'News' }))
+    return {
+      all: [...(trendCards.slice(0, 4)), ...(newsCards.slice(0, 4)), ...SALE_TEASERS.slice(0, 2)],
+      images: trendCards.slice(4, 10).length > 0 ? trendCards.slice(4, 10) : SALE_TEASERS.slice(0, 4),
+      videos: trendCards.slice(0, 6),
+      news: newsCards.length > 0 ? newsCards : [{ icon: '📰', title: 'Loading the latest headlines…', tag: 'News' }],
+      shopping: SALE_TEASERS,
+    }
+  }, [trending, newsItems])
 
   useEffect(() => {
     if (accessToken) fetchBalance()
@@ -45,8 +100,10 @@ export default function SearchPage() {
   return (
     <div className="search-page">
       <div className="search-container">
-        <h1 className="search-title">{user ? 'NudgeMe' : 'Nudge'}</h1>
-        <p className="subtitle">Spin to discover. Explore to earn.</p>
+        <div className="search-header-row">
+          <h1 className="search-title">{user ? 'NudgeMe' : 'Nudge'}</h1>
+          <p className="subtitle">Spin to discover. Explore to earn.</p>
+        </div>
 
         <SearchBar onSearch={handleSearch} loading={loading} />
 
@@ -65,50 +122,61 @@ export default function SearchPage() {
           </div>
         )}
 
-        {/* Loading spinner */}
-        {loading && (
-          <div className="loading-spinner">
-            <div className="spinner"></div>
-            <p>Searching the web...</p>
-          </div>
-        )}
-
         {/* Error message */}
         {error && !loading && (
           <div className="error-message">{error}</div>
         )}
 
-        {/* Results */}
+        {/* Compact results info line — kept slim so the slot sits high on the page */}
+        {results && !loading && (
+          <div className="results-info compact-info">
+            <strong>{results.totalResults}</strong> results for "{results.query}"
+            {results.isWinning && <span className="winning-indicator">🎉 WINNING!</span>}
+          </div>
+        )}
+
+        {/* ===== THE SLOT MACHINE — right under the search bar ===== */}
+        {loading || !results ? (
+          // Idle/live frame: drifts with latest sales + news, spins fast during search
+          !error && (
+            <ReelSpinner
+              idle
+              loading={loading}
+              loadingMessage={LOADING_MESSAGES[msgIdx]}
+              idleReels={idleReels}
+            />
+          )
+        ) : (
+          <ReelSpinner
+            reels={reels}
+            isWinning={results.isWinning}
+            onSpinComplete={handleSpinComplete}
+            resultMode={resultMode}
+            onResultModeChange={setResultMode}
+          />
+        )}
+
+        {/* Everything else sits BELOW the reels */}
         {results && !loading && (
           <>
-            <div className="results-info">
-              Found <strong>{results.totalResults}</strong> results for "{results.query}"
-              {results.enhancedQuery && (
-                <span className="enhanced-query"> (SuperNudge: {results.enhancedQuery})</span>
-              )}
-              {results.isWinning && (
-                <span className="winning-indicator">🎉 WINNING!</span>
-              )}
-            </div>
-
-              <AffiliateDisclosure variant="compact" />
-              {results?.sportsData && <SportsInfoCard sportsData={results.sportsData} />}
-
-            <ReelSpinner
-              reels={reels}
-              isWinning={results.isWinning}
-              onSpinComplete={handleSpinComplete}
-              resultMode={resultMode}
-              onResultModeChange={setResultMode}
-            />
+            {results.enhancedQuery && (
+              <div className="results-info enhanced-only">
+                SuperNudge: {results.enhancedQuery}
+              </div>
+            )}
+            {results?.sportsData && <SportsInfoCard sportsData={results.sportsData} />}
+            <AffiliateDisclosure variant="compact" />
+            {!user && (
+              <div className="signup-prompt">
+                <p>Create an account to save your credits and compete on leaderboards!</p>
+              </div>
+            )}
           </>
         )}
 
-        {/* Empty state with trending */}
+        {/* Trending chips + news below the idle frame */}
         {!results && !loading && !error && (
-          <div className="empty-state">
-            <div className="empty-icon">🎰</div>
-            <p>Enter a search query and spin the reels to discover results across All, Images, Videos, News, and Shopping</p>
+          <div className="empty-state below-frame">
             {trending.length > 0 && (
               <div className="trending-searches">
                 <p className="trending-label">🔥 Trending now</p>
@@ -126,13 +194,6 @@ export default function SearchPage() {
               </div>
             )}
             <TrendingNews onSearch={handleSearch} />
-          </div>
-        )}
-
-        {/* Sign-up prompt */}
-        {!user && results && !loading && (
-          <div className="signup-prompt">
-            <p>Create an account to save your credits and compete on leaderboards!</p>
           </div>
         )}
       </div>

@@ -13,6 +13,10 @@ const CATEGORIES = [
 // Uniform symbol height for ALL reels — keeps every reel the same size
 const SYMBOL_HEIGHT = 140
 
+// Default grid: 5 reels wide, 4 rows deep (single-category view shows more rows)
+const ALL_ROWS = 4
+const SINGLE_ROWS = 5
+
 // === Search Result Detail Modal ===
 function ResultModal({ result, onClose }) {
   if (!result) return null
@@ -82,7 +86,18 @@ function ResultModal({ result, onClose }) {
   )
 }
 
-export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMode, onResultModeChange }) {
+export default function ReelSpinner({
+  reels,
+  isWinning,
+  onSpinComplete,
+  resultMode,
+  onResultModeChange,
+  // Idle/live mode props
+  idle = false,
+  loading = false,
+  loadingMessage = '',
+  idleReels = null,
+}) {
   const [isSpinning, setIsSpinning] = useState(false)
   const [activeCategory, setActiveCategory] = useState('all')
   const [spinningReels, setSpinningReels] = useState({})
@@ -91,7 +106,6 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
   const timersRef = useRef([])
 
   // Per-reel pagination: which page (start index) each reel is currently showing.
-  // Reels advance SEQUENTIALLY — first entries, then the next batch, and so on.
   const pageStartsRef = useRef({})
 
   useEffect(() => {
@@ -102,7 +116,7 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
     ? CATEGORIES
     : CATEGORIES.filter(c => c.key === activeCategory)
 
-  const visibleSymbols = activeCategory === 'all' ? 3 : 5
+  const visibleSymbols = activeCategory === 'all' ? ALL_ROWS : SINGLE_ROWS
 
   // New search → reset every reel back to the first page
   useEffect(() => {
@@ -122,7 +136,54 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
     return reels
   }, [reels, resultMode])
 
-  // Advance a reel to its next sequential page; returns the page start index to display
+  // ================= IDLE / LIVE MODE =================
+  // A living slot frame that drifts slowly, showing the latest sales + news,
+  // and spins fast while a search is in flight.
+  if (idle) {
+    return (
+      <div className="slot-machine idle-mode">
+        <div className="slot-reels">
+          {CATEGORIES.map((cat, idx) => {
+            const items = idleReels?.[cat.key] || []
+            const doubled = [...items, ...items] // duplicate for a seamless drift loop
+            return (
+              <div className="slot-reel" key={cat.key}>
+                <div className="reel-label">
+                  <span>{cat.icon} {cat.label}</span>
+                </div>
+                <div className="reel-viewport" style={{ height: ALL_ROWS * SYMBOL_HEIGHT }}>
+                  <div
+                    className={`reel-track idle-track ${loading ? 'loading-spin' : (idx % 2 === 0 ? 'drift-down' : 'drift-up')}`}
+                  >
+                    {doubled.length > 0 ? doubled.map((item, i) => (
+                      <div className="reel-symbol idle-symbol" key={i} style={{ height: SYMBOL_HEIGHT }}>
+                        <span className="idle-icon">{item.icon}</span>
+                        <span className="idle-title">{item.title}</span>
+                        {item.tag && <span className="idle-tag">{item.tag}</span>}
+                      </div>
+                    )) : (
+                      <div className="reel-symbol idle-symbol" style={{ height: SYMBOL_HEIGHT }}>
+                        <span className="idle-icon">{cat.icon}</span>
+                        <span className="idle-title">Warming up…</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div className={`idle-caption ${loading ? 'searching' : ''}`}>
+          {loading
+            ? `🎰 ${loadingMessage || 'Searching the web…'}`
+            : 'Live from around the web — search to spin the reels'}
+        </div>
+      </div>
+    )
+  }
+
+  // ================= RESULTS MODE =================
+  // Advance a reel to its next sequential page
   const advanceReel = (catKey, reelLength) => {
     const current = pageStartsRef.current[catKey] || 0
     let next = current + visibleSymbols
@@ -131,7 +192,6 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
     return next
   }
 
-  // The reel's currently displayed start index (drives the range badge)
   const getDisplayStart = (catKey) => {
     const pos = finalPositions[catKey] || 0
     return pos / SYMBOL_HEIGHT
@@ -157,7 +217,6 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
       const stopDelay = 1200 + index * 250
 
       const timer = setTimeout(() => {
-        // Land on the NEXT sequential page of results
         let finalIndex = 0
         if (resultMode === 'random') {
           finalIndex = reel.length <= visibleSymbols
@@ -234,74 +293,76 @@ export default function ReelSpinner({ reels, isWinning, onSpinComplete, resultMo
           </div>
         </div>
 
-        {/* Reels */}
-        <div className="slot-reels">
-          {visibleCats.map((cat) => {
-            const reel = displayedReels[cat.key] || []
-            const start = getDisplayStart(cat.key)
-            const end = Math.min(start + visibleSymbols, reel.length)
-            return (
-              <div className="slot-reel" key={cat.key}>
-                <div className="reel-label">
-                  <span>{cat.icon} {cat.label}</span>
-                  {reel.length > 0 && (
-                    <span className="reel-page-badge">
-                      {start + 1}–{end} / {reel.length}
-                    </span>
-                  )}
-                </div>
-                <div
-                  className="reel-viewport"
-                  style={{ height: visibleSymbols * SYMBOL_HEIGHT }}
-                >
-                  <div
-                    className={`reel-track ${spinningReels[cat.key] ? 'spinning' : ''}`}
-                    style={{
-                      transform: spinningReels[cat.key]
-                        ? undefined
-                        : `translateY(-${finalPositions[cat.key] || 0}px)`,
-                      transition: spinningReels[cat.key] ? 'none' : 'transform 0.5s ease-out',
-                    }}
-                  >
-                    {reel.length > 0 ? (
-                      reel.map((result, i) => (
-                        <div className="reel-symbol" key={i} style={{ height: SYMBOL_HEIGHT }}>
-                          <ResultCard
-                            result={result}
-                            compact
-                            onOpenDetail={setSelectedResult}
-                          />
-                        </div>
-                      ))
-                    ) : (
-                      <div className="reel-symbol empty-symbol" style={{ height: SYMBOL_HEIGHT }}>
-                        <span>No results</span>
-                      </div>
+        {/* Reels + side control rail */}
+        <div className="slot-body">
+          <div className="slot-reels">
+            {visibleCats.map((cat) => {
+              const reel = displayedReels[cat.key] || []
+              const start = getDisplayStart(cat.key)
+              const end = Math.min(start + visibleSymbols, reel.length)
+              return (
+                <div className="slot-reel" key={cat.key}>
+                  <div className="reel-label">
+                    <span>{cat.icon} {cat.label}</span>
+                    {reel.length > 0 && (
+                      <span className="reel-page-badge">
+                        {start + 1}–{end} / {reel.length}
+                      </span>
                     )}
                   </div>
+                  <div
+                    className="reel-viewport"
+                    style={{ height: visibleSymbols * SYMBOL_HEIGHT }}
+                  >
+                    <div
+                      className={`reel-track ${spinningReels[cat.key] ? 'spinning' : ''}`}
+                      style={{
+                        transform: spinningReels[cat.key]
+                          ? undefined
+                          : `translateY(-${finalPositions[cat.key] || 0}px)`,
+                        transition: spinningReels[cat.key] ? 'none' : 'transform 0.5s ease-out',
+                      }}
+                    >
+                      {reel.length > 0 ? (
+                        reel.map((result, i) => (
+                          <div className="reel-symbol" key={i} style={{ height: SYMBOL_HEIGHT }}>
+                            <ResultCard
+                              result={result}
+                              compact
+                              onOpenDetail={setSelectedResult}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="reel-symbol empty-symbol" style={{ height: SYMBOL_HEIGHT }}>
+                          <span>No results</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
 
-        {/* Spin + Next controls */}
-        <div className="spin-controls">
-          <button
-            onClick={handleSpin}
-            disabled={isSpinning}
-            className={`spin-btn ${isWinning ? 'winning' : ''}`}
-          >
-            {isSpinning ? '🎰 Spinning...' : '🎰 SPIN'}
-          </button>
-          <button
-            onClick={handleNext}
-            disabled={isSpinning}
-            className="next-btn"
-            title="Show the next batch of results"
-          >
-            Next ▶
-          </button>
+          {/* Side rail: SPIN + Next right beside the reels for easy browsing */}
+          <div className="spin-rail">
+            <button
+              onClick={handleSpin}
+              disabled={isSpinning}
+              className={`spin-btn ${isWinning ? 'winning' : ''}`}
+            >
+              {isSpinning ? '🎰 …' : '🎰 SPIN'}
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={isSpinning}
+              className="next-btn"
+              title="Show the next batch of results"
+            >
+              Next ▶
+            </button>
+          </div>
         </div>
 
         {isWinning && (
