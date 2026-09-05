@@ -1,5 +1,5 @@
 import { pool } from '../config/database.js';
-import { fetchSearchResults, calculateRelevanceScore, checkWinningCombination, enhanceQuery, searchGoogleNewsRSS, searchSerpAPINews } from '../config/searchApis.js';
+import { fetchSearchResults, calculateRelevanceScore, checkWinningCombination, enhanceQuery, searchGoogleNewsRSS, searchSerpAPINews, searchSerpAPIVideos } from '../config/searchApis.js';
 import { wrapWithAffiliate, isAffiliateEligible } from '../config/affiliateLinks.js';
 import sportsService from '../config/sportsService.js';
 import { getCached, setCached, makeCacheKey } from '../middleware/searchCache.js';
