@@ -5,7 +5,7 @@ dotenv.config();
 // Publisher credentials
 const AWIN_PUBLISHER_ID = process.env.AWIN_PUBLISHER_ID || '2782536';
 const AWIN_API_TOKEN = process.env.AWIN_API_TOKEN || '';
-const CJ_PID = process.env.CJ_PID || '';
+const CJ_PID = process.env.CJ_PID || '101878348'; // Nudge property (CID 7338898)
 const DEFAULT_CASHBACK_RATE = parseFloat(process.env.DEFAULT_CASHBACK_RATE || '3.50');
 
 // CJ tracking domains (rotated randomly)
