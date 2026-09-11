@@ -113,20 +113,12 @@ export default function ResultCard({ result, compact, onOpenDetail }) {
         <div className="compact-footer">
           <span className="result-source">{sourceName}</span>
           <div className="compact-actions">
-            {result.date && (
-              <span className="compact-date">
-                {new Date(result.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            {result.isAffiliateEligible && (
+              <span className="cashback-badge coin-badge" title={`${result.cashbackRate}% cashback — sponsor coin!`}>
+                🪙 {result.cashbackRate}%
               </span>
             )}
             <span className="result-relevance">{((result.relevanceScore || 0) * 100).toFixed(0)}%</span>
-            {result.isAffiliateEligible && (
-              <span className="cashback-badge" title={`${result.cashbackRate}% cashback available`}>
-                💰 {result.cashbackRate}%
-              </span>
-            )}
-            <button className="share-btn compact-share" onClick={handleShare} title="Share">
-              {copied ? '✓' : '📤'}
-            </button>
           </div>
         </div>
         <span className="reel-symbol-click-hint">tap →</span>

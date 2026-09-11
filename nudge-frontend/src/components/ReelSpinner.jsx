@@ -10,12 +10,14 @@ const CATEGORIES = [
   { key: 'shopping', label: 'Shopping', icon: '🛒' },
 ]
 
-// Uniform symbol height for ALL reels — compact so more results fit on the page
-const SYMBOL_HEIGHT = 110
+// Uniform symbol height for ALL reels — sized so a card's content fits without clipping
+const SYMBOL_HEIGHT = 118
 
-// Default grid: 5 reels wide, 4 rows deep (single-category view shows more rows)
-const ALL_ROWS = 4
-const SINGLE_ROWS = 5
+// All-view: 5 reels x 5 rows = 25 results on ONE screen
+const ALL_ROWS = 5
+
+// Single-category view: a grid of up to 30 results on one screen
+const GRID_PAGE_SIZE = 30
 
 // === Search Result Detail Modal ===
 function ResultModal({ result, onClose }) {
@@ -97,12 +99,15 @@ export default function ReelSpinner({
   loading = false,
   loadingMessage = '',
   idleReels = null,
+  onIdleSearch,
 }) {
   const [isSpinning, setIsSpinning] = useState(false)
   const [activeCategory, setActiveCategory] = useState('all')
   const [spinningReels, setSpinningReels] = useState({})
   const [finalPositions, setFinalPositions] = useState({})
   const [selectedResult, setSelectedResult] = useState(null)
+  const [gridPage, setGridPage] = useState(0)
+  const [coinWin, setCoinWin] = useState(null)
   const timersRef = useRef([])
 
   // Per-reel pagination: which page (start index) each reel is currently showing.
@@ -112,16 +117,14 @@ export default function ReelSpinner({
     return () => { timersRef.current.forEach(t => clearTimeout(t)) }
   }, [])
 
-  const visibleCats = activeCategory === 'all'
-    ? CATEGORIES
-    : CATEGORIES.filter(c => c.key === activeCategory)
+  const visibleSymbols = ALL_ROWS
 
-  const visibleSymbols = activeCategory === 'all' ? ALL_ROWS : SINGLE_ROWS
-
-  // New search → reset every reel back to the first page
+  // New search → reset every reel back to the first page + clear any coin win
   useEffect(() => {
     pageStartsRef.current = {}
     setFinalPositions({})
+    setGridPage(0)
+    setCoinWin(null)
   }, [reels])
 
   const displayedReels = useMemo(() => {
@@ -138,7 +141,8 @@ export default function ReelSpinner({
 
   // ================= IDLE / LIVE MODE =================
   // A living slot frame that drifts slowly, showing the latest sales + news,
-  // and spins fast while a search is in flight.
+  // and spins fast while a search is in flight. Every card is tappable —
+  // tapping searches that item.
   if (idle) {
     return (
       <div className="slot-machine idle-mode">
@@ -156,10 +160,17 @@ export default function ReelSpinner({
                     className={`reel-track idle-track ${loading ? 'loading-spin' : (idx % 2 === 0 ? 'drift-down' : 'drift-up')}`}
                   >
                     {doubled.length > 0 ? doubled.map((item, i) => (
-                      <div className="reel-symbol idle-symbol" key={i} style={{ height: SYMBOL_HEIGHT }}>
+                      <div
+                        className="reel-symbol idle-symbol clickable"
+                        key={i}
+                        style={{ height: SYMBOL_HEIGHT }}
+                        onClick={() => !loading && onIdleSearch?.(item.q || item.title)}
+                        title={`Search: ${item.q || item.title}`}
+                      >
                         <span className="idle-icon">{item.icon}</span>
                         <span className="idle-title">{item.title}</span>
                         {item.tag && <span className="idle-tag">{item.tag}</span>}
+                        <span className="idle-tap-hint">tap to search</span>
                       </div>
                     )) : (
                       <div className="reel-symbol idle-symbol" style={{ height: SYMBOL_HEIGHT }}>
@@ -176,7 +187,7 @@ export default function ReelSpinner({
         <div className={`idle-caption ${loading ? 'searching' : ''}`}>
           {loading
             ? `🎰 ${loadingMessage || 'Searching the web…'}`
-            : 'Live from around the web — search to spin the reels'}
+            : 'Live from around the web — search to spin, or tap any card to search it'}
         </div>
       </div>
     )
@@ -199,22 +210,23 @@ export default function ReelSpinner({
 
   const handleSpin = () => {
     if (isSpinning) return
-    const hasResults = visibleCats.some(cat => {
+    const hasResults = CATEGORIES.some(cat => {
       const reel = displayedReels[cat.key] || []
       return reel.length > 0
     })
     if (!hasResults) return
 
     setIsSpinning(true)
+    setCoinWin(null)
     const spinning = {}
-    visibleCats.forEach(cat => {
-      spinning[cat.key] = true
-    })
+    CATEGORIES.forEach(cat => { spinning[cat.key] = true })
     setSpinningReels(spinning)
 
-    visibleCats.forEach((cat, index) => {
+    const positions = {}
+
+    CATEGORIES.forEach((cat, index) => {
       const reel = displayedReels[cat.key] || []
-      const stopDelay = 1200 + index * 250
+      const stopDelay = 900 + index * 200
 
       const timer = setTimeout(() => {
         let finalIndex = 0
@@ -225,15 +237,38 @@ export default function ReelSpinner({
         } else {
           finalIndex = advanceReel(cat.key, reel.length)
         }
+        positions[cat.key] = finalIndex * SYMBOL_HEIGHT
         setFinalPositions(prev => ({ ...prev, [cat.key]: finalIndex * SYMBOL_HEIGHT }))
         setSpinningReels(prev => ({ ...prev, [cat.key]: false }))
       }, stopDelay)
       timersRef.current.push(timer)
     })
 
-    const totalDuration = 1200 + (visibleCats.length - 1) * 250 + 500
+    const totalDuration = 900 + (CATEGORIES.length - 1) * 200 + 400
     const completeTimer = setTimeout(() => {
       setIsSpinning(false)
+
+      // === SPONSOR COIN WIN CHECK ===
+      // Count the coin cards (cashback/sponsor results) visible on screen
+      // across ALL five reels. Three or more = a sponsor win the user can claim.
+      const visibleCards = []
+      CATEGORIES.forEach(cat => {
+        const reel = displayedReels[cat.key] || []
+        const startIdx = (positions[cat.key] || 0) / SYMBOL_HEIGHT
+        for (let i = startIdx; i < Math.min(startIdx + visibleSymbols, reel.length); i++) {
+          visibleCards.push(reel[i])
+        }
+      })
+      const coins = visibleCards.filter(c => c && c.isAffiliateEligible && (c.affiliateUrl || c.url))
+      if (coins.length >= 3) {
+        const merchants = [...new Set(coins.map(c => c.merchantName || c.merchant).filter(Boolean))]
+        setCoinWin({
+          count: coins.length,
+          merchants,
+          url: coins[0].affiliateUrl || coins[0].url,
+        })
+      }
+
       onSpinComplete?.()
     }, totalDuration)
     timersRef.current.push(completeTimer)
@@ -243,7 +278,7 @@ export default function ReelSpinner({
   const handleNext = () => {
     if (isSpinning) return
     const positions = {}
-    visibleCats.forEach(cat => {
+    CATEGORIES.forEach(cat => {
       const reel = displayedReels[cat.key] || []
       if (reel.length === 0) return
       const next = resultMode === 'random'
@@ -260,43 +295,110 @@ export default function ReelSpinner({
     return null
   }
 
-  return (
-    <>
-      <div className="slot-machine">
-        {/* Category buttons + mode toggle */}
-        <div className="reel-controls">
-          <div className="category-buttons">
-            {CATEGORIES.map(cat => {
-              const count = (displayedReels[cat.key] || []).length
-              return (
-                <button
-                  key={cat.key}
-                  className={`cat-btn ${activeCategory === cat.key ? 'active' : ''}`}
-                  onClick={() => setActiveCategory(cat.key)}
-                >
-                  {cat.icon} {cat.label}
-                  {count > 0 && <span className="cat-count">{count}</span>}
-                </button>
-              )
-            })}
+  const handleCategoryChange = (key) => {
+    setActiveCategory(key)
+    setGridPage(0)
+  }
+
+  // ---------- Shared controls (category buttons + mode toggle) ----------
+  const controls = (
+    <div className="reel-controls">
+      <div className="category-buttons">
+        {CATEGORIES.map(cat => {
+          const count = (displayedReels[cat.key] || []).length
+          return (
+            <button
+              key={cat.key}
+              className={`cat-btn ${activeCategory === cat.key ? 'active' : ''}`}
+              onClick={() => handleCategoryChange(cat.key)}
+            >
+              {cat.icon} {cat.label}
+              {count > 0 && <span className="cat-count">{count}</span>}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="mode-toggle">
+        <button
+          className={`mode-btn ${resultMode === 'top' ? 'active' : ''}`}
+          onClick={() => onResultModeChange('top')}
+        >Top Results</button>
+        <button
+          className={`mode-btn ${resultMode === 'random' ? 'active' : ''}`}
+          onClick={() => onResultModeChange('random')}
+        >🎲 Random</button>
+      </div>
+    </div>
+  )
+
+  // ================= SINGLE-CATEGORY GRID VIEW =================
+  // One category fills the whole frame as a grid — 25-30 results on one screen.
+  if (activeCategory !== 'all') {
+    const cat = CATEGORIES.find(c => c.key === activeCategory)
+    const reel = displayedReels[cat.key] || []
+    const gridStart = gridPage * GRID_PAGE_SIZE
+    const gridItems = reel.slice(gridStart, gridStart + GRID_PAGE_SIZE)
+    const gridPages = Math.max(1, Math.ceil(reel.length / GRID_PAGE_SIZE))
+
+    return (
+      <>
+        <div className="slot-machine">
+          {controls}
+
+          <div className="category-grid-header">
+            <span className="grid-header-label">{cat.icon} {cat.label}</span>
+            {reel.length > 0 && (
+              <span className="reel-page-badge">
+                {gridStart + 1}–{Math.min(gridStart + GRID_PAGE_SIZE, reel.length)} of {reel.length}
+              </span>
+            )}
           </div>
 
-          <div className="mode-toggle">
+          {reel.length > 0 ? (
+            <div className="category-grid">
+              {gridItems.map((result, i) => (
+                <div className="grid-cell" key={i}>
+                  <ResultCard result={result} compact onOpenDetail={setSelectedResult} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid-empty">No {cat.label.toLowerCase()} results for this search</div>
+          )}
+
+          <div className="spin-controls">
             <button
-              className={`mode-btn ${resultMode === 'top' ? 'active' : ''}`}
-              onClick={() => onResultModeChange('top')}
-            >Top Results</button>
-            <button
-              className={`mode-btn ${resultMode === 'random' ? 'active' : ''}`}
-              onClick={() => onResultModeChange('random')}
-            >🎲 Random</button>
+              onClick={() => setGridPage(p => (p + 1) % gridPages)}
+              className="next-btn"
+              title="Show the next batch of results"
+            >
+              Next ▶
+            </button>
+            <span className="grid-page-indicator">page {gridPage + 1} / {gridPages}</span>
+          </div>
+
+          <div className="how-it-works">
+            <span>🎰 SPIN shows 25 results on one screen</span>
+            <span>🪙 3 sponsor coins on screen = claim a reward</span>
+            <span>👆 Tap any card to open it</span>
           </div>
         </div>
 
-        {/* Reels + side control rail */}
+        {selectedResult && <ResultModal result={selectedResult} onClose={() => setSelectedResult(null)} />}
+      </>
+    )
+  }
+
+  // ================= ALL-CATEGORIES SLOT VIEW =================
+  return (
+    <>
+      <div className="slot-machine">
+        {controls}
+
         <div className="slot-body">
           <div className="slot-reels">
-            {visibleCats.map((cat) => {
+            {CATEGORIES.map((cat) => {
               const reel = displayedReels[cat.key] || []
               const start = getDisplayStart(cat.key)
               const end = Math.min(start + visibleSymbols, reel.length)
@@ -365,9 +467,34 @@ export default function ReelSpinner({
           </div>
         </div>
 
-        {isWinning && (
-          <div className="winning-banner">🎉 WINNING COMBINATION! +3 Credits</div>
+        {/* SPONSOR COIN WIN — 3+ cashback coins landed on one screen */}
+        {coinWin && (
+          <div className="coin-win-banner">
+            <span className="coin-win-emoji">🪙🪙🪙</span>
+            <div className="coin-win-body">
+              <strong>{coinWin.count} SPONSOR COINS — YOU WON!</strong>
+              <p>
+                {coinWin.merchants.length > 0
+                  ? `Claim your reward at ${coinWin.merchants[0]}${coinWin.merchants.length > 1 ? ' and partners' : ''}.`
+                  : 'Claim your reward from the sponsor.'}
+              </p>
+            </div>
+            <button className="coin-claim-btn" onClick={() => window.open(coinWin.url, '_blank')}>
+              Claim Reward →
+            </button>
+          </div>
         )}
+
+        {/* Backend relevance win — explained in plain language */}
+        {!coinWin && isWinning && (
+          <div className="winning-banner">🔥 All 5 reels aligned — top results! +3 credits</div>
+        )}
+
+        <div className="how-it-works">
+          <span>🎰 SPIN shows 25 results on one screen</span>
+          <span>🪙 3 sponsor coins on screen = claim a reward</span>
+          <span>👆 Tap any card to open it</span>
+        </div>
       </div>
 
       {/* Result detail modal */}

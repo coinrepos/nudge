@@ -102,8 +102,9 @@
 }
 
 .slot-reel {
-  flex-shrink: 0;
-  width: 200px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 280px;
   background: var(--darker);
   border-radius: 8px;
   overflow: hidden;
@@ -158,7 +159,7 @@
 }
 
 .reel-track.spinning {
-  animation: slotScroll 0.15s linear infinite;
+  animation: slotScroll 0.8s linear infinite;
 }
 
 @keyframes slotScroll {
@@ -305,7 +306,6 @@
 
 @media (max-width: 1024px) {
   .slot-reels { gap: 0.5rem; }
-  .slot-reel { width: 175px; }
 }
 
 @media (max-width: 768px) {
@@ -316,7 +316,7 @@
     padding-bottom: 1rem;
     justify-content: flex-start;
   }
-  .slot-reel { width: 160px; }
+  .slot-reel { flex: 0 0 160px; max-width: 160px; }
   .spin-btn { flex: 1; max-width: 260px; }
   .next-btn { flex: 0 0 auto; padding: 1rem 1.2rem; }
   .reel-controls { flex-direction: column; }
@@ -1068,4 +1068,154 @@
 @keyframes idleCaptionPulse {
   0%, 100% { opacity: 0.75; }
   50% { opacity: 1; }
+}
+
+
+/* ================= SINGLE-CATEGORY GRID ================= */
+/* One category fills the frame: up to 30 results on ONE screen */
+.category-grid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 0.25rem;
+}
+
+.grid-header-label {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.grid-cell {
+  height: 118px;
+}
+
+.grid-cell .result-card.compact {
+  height: 100%;
+}
+
+.grid-empty {
+  color: var(--text-muted);
+  padding: 2rem;
+  text-align: center;
+  width: 100%;
+}
+
+.grid-page-indicator {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ================= SPONSOR COIN WIN ================= */
+.coin-win-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.9rem 1.2rem;
+  border-radius: 12px;
+  border: 2px solid var(--primary);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0.06));
+  animation: coinWinIn 0.4s ease-out, winPulse 0.5s ease-in-out 3;
+}
+
+@keyframes coinWinIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.coin-win-emoji {
+  font-size: 1.8rem;
+  letter-spacing: -0.2em;
+}
+
+.coin-win-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.coin-win-body strong {
+  display: block;
+  color: var(--primary);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.coin-win-body p {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.coin-claim-btn {
+  flex-shrink: 0;
+  padding: 0.7rem 1.3rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: var(--darker);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+  transition: transform 0.15s;
+}
+
+.coin-claim-btn:hover {
+  transform: scale(1.05);
+}
+
+/* ================= HOW IT WORKS HINT ================= */
+.how-it-works {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1.4rem;
+  width: 100%;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+/* ================= CLICKABLE IDLE CARDS ================= */
+.reel-symbol.idle-symbol.clickable {
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.reel-symbol.idle-symbol.clickable:hover {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.idle-tap-hint {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 0.55rem;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+.reel-symbol.idle-symbol.clickable:hover .idle-tap-hint {
+  color: var(--primary);
+}
+
+@media (max-width: 768px) {
+  .coin-win-banner { flex-wrap: wrap; }
+  .coin-claim-btn { width: 100%; }
+  .category-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .grid-cell { height: 118px; }
+  .how-it-works { font-size: 0.65rem; gap: 0.3rem 0.8rem; }
 }

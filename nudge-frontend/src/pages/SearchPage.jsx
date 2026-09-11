@@ -25,12 +25,12 @@ const LOADING_MESSAGES = [
 
 // Static teasers for the idle Shopping reel
 const SALE_TEASERS = [
-  { icon: '🔥', title: 'Flash sales — up to 70% off', tag: 'Today only' },
-  { icon: '💰', title: 'Earn Nudge Cash on shopping', tag: 'Cashback' },
-  { icon: '🆓', title: 'Free shipping deals inside', tag: 'Free' },
-  { icon: '🏷️', title: 'Big brand clearance live now', tag: 'Sale' },
-  { icon: '⚡', title: 'New drops land every hour', tag: 'Fresh' },
-  { icon: '🎁', title: 'Bonus cashback on the Shopping reel', tag: 'Cashback' },
+  { icon: '🔥', title: 'Flash sales — up to 70% off', tag: 'Today only', q: 'flash sales today' },
+  { icon: '💰', title: 'Earn Nudge Cash on shopping', tag: 'Cashback', q: 'best cashback deals' },
+  { icon: '🆓', title: 'Free shipping deals inside', tag: 'Free', q: 'free shipping deals' },
+  { icon: '🏷️', title: 'Big brand clearance live now', tag: 'Sale', q: 'clearance sale' },
+  { icon: '⚡', title: 'New drops land every hour', tag: 'Fresh', q: 'new arrivals' },
+  { icon: '🎁', title: 'Bonus cashback on the Shopping reel', tag: 'Cashback', q: 'cashback offers' },
 ]
 
 export default function SearchPage() {
@@ -144,6 +144,7 @@ export default function SearchPage() {
               loading={loading}
               loadingMessage={LOADING_MESSAGES[msgIdx]}
               idleReels={idleReels}
+              onIdleSearch={handleSearch}
             />
           )
         ) : (
